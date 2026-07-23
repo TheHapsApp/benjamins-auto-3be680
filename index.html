@@ -335,7 +335,7 @@ function tone(freq, start, dur, type, gainMax){
 // ---------- navigation ----------
 const backBtn = document.getElementById("backBtn");
 let musicInterval = null, callingTimeout = null, callTimerInterval = null;
-let scriptTimeout1 = null, scriptTimeout2 = null;
+let scriptTimeout1 = null, scriptTimeout2 = null, scriptTimeout3 = null;
 let musicPlaying = false, callSeconds = 0;
 
 function resetAppStates(){
@@ -344,6 +344,7 @@ function resetAppStates(){
   clearInterval(callTimerInterval); callTimerInterval = null;
   clearTimeout(scriptTimeout1); scriptTimeout1 = null;
   clearTimeout(scriptTimeout2); scriptTimeout2 = null;
+  clearTimeout(scriptTimeout3); scriptTimeout3 = null;
 
   musicPlaying = false;
   document.getElementById("musicPlay").textContent = "▶️";
@@ -496,21 +497,37 @@ document.getElementById("musicNext").addEventListener("click", () => {
 renderPlaylistRow();
 
 // ---------- phone ----------
-const FRIEND_SCRIPT = {
-  question: "Wanna play after school?",
-  options: [
-    { label:"Sure! 👍",    reply:"Sure!" },
-    { label:"Maybe later", reply:"Maybe later after school" },
-  ],
-  closing: "Cool!",
-};
 const CONTACTS = [
-  { name:"Mom",     emo:"👩", msg:"Hi honey, love you! ❤️" },
-  { name:"Dad",     emo:"👨", msg:"Hey buddy, great job! 👍" },
-  { name:"Grandma", emo:"👵", msg:"I baked cookies for you! 🍪" },
-  { name:"Grandpa", emo:"👴", msg:"Let's go fishing soon! 🎣" },
-  { name:"Jake",    emo:"👦", script:FRIEND_SCRIPT },
-  { name:"Ava",     emo:"👧", script:FRIEND_SCRIPT },
+  { name:"Mom", emo:"👩", script:{
+      question:"Can you help set the table for dinner?",
+      options:[{ label:"Sure Mom! 👍", reply:"Sure Mom!" }, { label:"In a minute", reply:"In a minute!" }],
+      response:"Thanks, sweetie!", bye:"Bye!"
+  }},
+  { name:"Dad", emo:"👨", script:{
+      question:"Want to shoot some hoops later?",
+      options:[{ label:"Heck yeah! 🏀", reply:"Heck yeah!" }, { label:"Not today", reply:"Not today, Dad" }],
+      response:"Sounds good!", bye:"Goodbye!"
+  }},
+  { name:"Grandma", emo:"👵", script:{
+      question:"Want to come over for cookies this weekend?",
+      options:[{ label:"Yes please! 🍪", reply:"Yes please!" }, { label:"Maybe next time", reply:"Maybe next time" }],
+      response:"Okay dear!", bye:"Bye bye!"
+  }},
+  { name:"Grandpa", emo:"👴", script:{
+      question:"Ready to go fishing Saturday?",
+      options:[{ label:"Can't wait! 🎣", reply:"Can't wait!" }, { label:"We'll see", reply:"We'll see" }],
+      response:"Alright!", bye:"Goodbye!"
+  }},
+  { name:"Jake", emo:"👦", script:{
+      question:"Wanna play after school?",
+      options:[{ label:"Sure! 👍", reply:"Sure!" }, { label:"Maybe later", reply:"Maybe later after school" }],
+      response:"Cool!", bye:"Bye!"
+  }},
+  { name:"Ava", emo:"👧", script:{
+      question:"Want to ride bikes today?",
+      options:[{ label:"Let's go! 🚲", reply:"Let's go!" }, { label:"Not right now", reply:"Not right now" }],
+      response:"Okay!", bye:"Goodbye!"
+  }},
 ];
 function formatTime(s){
   const m = Math.floor(s / 60);
@@ -559,30 +576,30 @@ function connectCall(contact){
   const optsEl = document.getElementById("callOptions");
   const hangupBtn = document.getElementById("hangupBtn");
   optsEl.innerHTML = "";
+  hangupBtn.style.display = "";
 
-  if (contact.script){
-    hangupBtn.style.display = "none";
-    msgEl.textContent = contact.name + ": " + contact.script.question;
-    contact.script.options.forEach(opt => {
-      const btn = document.createElement("button");
-      btn.className = "call-option-btn";
-      btn.textContent = opt.label;
-      btn.addEventListener("click", () => {
-        tone(500, 0, 0.1, "triangle", 0.12);
-        optsEl.innerHTML = "";
-        msgEl.textContent = "You: " + opt.reply;
-        scriptTimeout1 = setTimeout(() => {
-          tone(700, 0, 0.15, "sine", 0.12);
-          msgEl.textContent = contact.name + ": " + contact.script.closing;
-        }, 1100);
-        scriptTimeout2 = setTimeout(endCall, 2600);
-      });
-      optsEl.appendChild(btn);
+  const script = contact.script;
+  msgEl.textContent = contact.name + ": " + script.question;
+  script.options.forEach(opt => {
+    const btn = document.createElement("button");
+    btn.className = "call-option-btn";
+    btn.textContent = opt.label;
+    btn.addEventListener("click", () => {
+      tone(500, 0, 0.1, "triangle", 0.12);
+      optsEl.innerHTML = "";
+      hangupBtn.style.display = "none";
+      msgEl.textContent = "You: " + opt.reply;
+      scriptTimeout1 = setTimeout(() => {
+        tone(700, 0, 0.15, "sine", 0.12);
+        msgEl.textContent = contact.name + ": " + script.response;
+      }, 1100);
+      scriptTimeout2 = setTimeout(() => {
+        msgEl.textContent = contact.name + ": " + script.bye;
+      }, 2400);
+      scriptTimeout3 = setTimeout(endCall, 3800);
     });
-  } else {
-    hangupBtn.style.display = "";
-    msgEl.textContent = contact.msg;
-  }
+    optsEl.appendChild(btn);
+  });
 
   callSeconds = 0;
   callTimerInterval = setInterval(() => {
