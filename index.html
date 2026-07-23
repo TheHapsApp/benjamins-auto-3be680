@@ -138,6 +138,9 @@
   .call-btn.leave{background:#ef4444; width:auto; border-radius:999px; padding:0 18px; font-size:0.9rem; font-weight:bold; height:40px;}
   .call-timer{font-size:1.2rem; font-weight:bold;}
   .call-msg{font-size:0.85rem; background:rgba(255,255,255,0.12); border-radius:10px; padding:6px 12px; max-width:220px;}
+  .call-options{display:flex; gap:10px;}
+  .call-option-btn{background:rgba(255,255,255,0.18); border:2px solid #fff; border-radius:999px; padding:8px 14px; color:#fff; font-family:inherit; font-weight:bold; font-size:0.78rem; cursor:pointer;}
+  .call-option-btn:active{transform:translateY(2px);}
 
   /* ---- climate ---- */
   .climate-card{display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; gap:10px; color:#e5e7eb; padding:8px;}
@@ -267,6 +270,7 @@
         <div class="caller-name" id="activeName">Mom</div>
         <div class="call-timer" id="callTimer">00:00</div>
         <div class="call-msg" id="callMsg"></div>
+        <div class="call-options" id="callOptions"></div>
         <button class="call-btn leave" id="hangupBtn">✖ Hang Up</button>
       </div>
     </div>
@@ -331,12 +335,15 @@ function tone(freq, start, dur, type, gainMax){
 // ---------- navigation ----------
 const backBtn = document.getElementById("backBtn");
 let musicInterval = null, callingTimeout = null, callTimerInterval = null;
+let scriptTimeout1 = null, scriptTimeout2 = null;
 let musicPlaying = false, callSeconds = 0;
 
 function resetAppStates(){
   clearInterval(musicInterval); musicInterval = null;
   clearTimeout(callingTimeout); callingTimeout = null;
   clearInterval(callTimerInterval); callTimerInterval = null;
+  clearTimeout(scriptTimeout1); scriptTimeout1 = null;
+  clearTimeout(scriptTimeout2); scriptTimeout2 = null;
 
   musicPlaying = false;
   document.getElementById("musicPlay").textContent = "▶️";
@@ -344,6 +351,8 @@ function resetAppStates(){
 
   callSeconds = 0;
   document.getElementById("callTimer").textContent = "00:00";
+  document.getElementById("callOptions").innerHTML = "";
+  document.getElementById("hangupBtn").style.display = "";
   document.getElementById("phoneIdle").style.display = "flex";
   document.getElementById("phoneCalling").style.display = "none";
   document.getElementById("phoneActive").style.display = "none";
@@ -368,10 +377,11 @@ const MAP_PLACES = [
   { id:"home",       emo:"🏠", name:"Home",                  left:"85%", top:"15%", minutes:12 },
   { id:"icecream",   emo:"🍦", name:"Frosty's Ice Cream",     left:"45%", top:"15%", minutes:6 },
   { id:"pizza",      emo:"🍕", name:"Pete's Pizza",           left:"10%", top:"15%", minutes:5 },
-  { id:"bestfriend", emo:"🏡", name:"Best Friend's House",    left:"10%", top:"52%", minutes:4 },
-  { id:"grandma",    emo:"👵", name:"Grandma's House",        left:"10%", top:"64%", minutes:9 },
-  { id:"grocery",    emo:"🛒", name:"Fresh Mart",             left:"85%", top:"52%", minutes:7 },
-  { id:"grandpa",    emo:"👴", name:"Grandpa's House",        left:"85%", top:"64%", minutes:9 },
+  { id:"jake",       emo:"👦", name:"Jake's House",           left:"10%", top:"44%", minutes:4 },
+  { id:"ava",        emo:"👧", name:"Ava's House",            left:"10%", top:"55%", minutes:4 },
+  { id:"grandma",    emo:"👵", name:"Grandma's House",        left:"10%", top:"66%", minutes:9 },
+  { id:"grocery",    emo:"🛒", name:"Fresh Mart",             left:"85%", top:"44%", minutes:7 },
+  { id:"grandpa",    emo:"👴", name:"Grandpa's House",        left:"85%", top:"66%", minutes:9 },
   { id:"pool",       emo:"🏊", name:"Splash Pool",            left:"85%", top:"86%", minutes:9 },
   { id:"pond1",      emo:"🪷", name:"Willow Pond",            left:"45%", top:"86%", minutes:8, water:"pond" },
   { id:"pond2",      emo:"🦆", name:"Duck Pond",              left:"10%", top:"86%", minutes:8, water:"pond" },
@@ -486,12 +496,21 @@ document.getElementById("musicNext").addEventListener("click", () => {
 renderPlaylistRow();
 
 // ---------- phone ----------
+const FRIEND_SCRIPT = {
+  question: "Wanna play after school?",
+  options: [
+    { label:"Sure! 👍",    reply:"Sure!" },
+    { label:"Maybe later", reply:"Maybe later after school" },
+  ],
+  closing: "Cool!",
+};
 const CONTACTS = [
-  { name:"Mom",         emo:"👩", msg:"Hi honey, love you! ❤️" },
-  { name:"Dad",         emo:"👨", msg:"Hey buddy, great job! 👍" },
-  { name:"Grandma",     emo:"👵", msg:"I baked cookies for you! 🍪" },
-  { name:"Grandpa",     emo:"👴", msg:"Let's go fishing soon! 🎣" },
-  { name:"Best Friend", emo:"🧒", msg:"Wanna play after school? 🎮" },
+  { name:"Mom",     emo:"👩", msg:"Hi honey, love you! ❤️" },
+  { name:"Dad",     emo:"👨", msg:"Hey buddy, great job! 👍" },
+  { name:"Grandma", emo:"👵", msg:"I baked cookies for you! 🍪" },
+  { name:"Grandpa", emo:"👴", msg:"Let's go fishing soon! 🎣" },
+  { name:"Jake",    emo:"👦", script:FRIEND_SCRIPT },
+  { name:"Ava",     emo:"👧", script:FRIEND_SCRIPT },
 ];
 function formatTime(s){
   const m = Math.floor(s / 60);
@@ -535,19 +554,52 @@ function connectCall(contact){
   document.getElementById("phoneActive").style.display = "flex";
   document.getElementById("activeAvatar").textContent = contact.emo;
   document.getElementById("activeName").textContent = contact.name;
-  document.getElementById("callMsg").textContent = contact.msg;
+
+  const msgEl = document.getElementById("callMsg");
+  const optsEl = document.getElementById("callOptions");
+  const hangupBtn = document.getElementById("hangupBtn");
+  optsEl.innerHTML = "";
+
+  if (contact.script){
+    hangupBtn.style.display = "none";
+    msgEl.textContent = contact.name + ": " + contact.script.question;
+    contact.script.options.forEach(opt => {
+      const btn = document.createElement("button");
+      btn.className = "call-option-btn";
+      btn.textContent = opt.label;
+      btn.addEventListener("click", () => {
+        tone(500, 0, 0.1, "triangle", 0.12);
+        optsEl.innerHTML = "";
+        msgEl.textContent = "You: " + opt.reply;
+        scriptTimeout1 = setTimeout(() => {
+          tone(700, 0, 0.15, "sine", 0.12);
+          msgEl.textContent = contact.name + ": " + contact.script.closing;
+        }, 1100);
+        scriptTimeout2 = setTimeout(endCall, 2600);
+      });
+      optsEl.appendChild(btn);
+    });
+  } else {
+    hangupBtn.style.display = "";
+    msgEl.textContent = contact.msg;
+  }
+
   callSeconds = 0;
   callTimerInterval = setInterval(() => {
     callSeconds++;
     document.getElementById("callTimer").textContent = formatTime(callSeconds);
   }, 1000);
 }
-document.getElementById("hangupBtn").addEventListener("click", () => {
+function endCall(){
   clearInterval(callTimerInterval); callTimerInterval = null;
+  clearTimeout(scriptTimeout1); scriptTimeout1 = null;
+  clearTimeout(scriptTimeout2); scriptTimeout2 = null;
   document.getElementById("phoneActive").style.display = "none";
   document.getElementById("phoneIdle").style.display = "flex";
   document.getElementById("callTimer").textContent = "00:00";
-});
+  document.getElementById("callOptions").innerHTML = "";
+}
+document.getElementById("hangupBtn").addEventListener("click", endCall);
 renderContacts();
 
 // ---------- climate ----------
