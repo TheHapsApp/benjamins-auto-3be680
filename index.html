@@ -77,7 +77,7 @@
   .street-sign{position:absolute; font-size:1.3rem; transform:translate(-50%,-50%); z-index:1; filter:drop-shadow(0 1px 1px rgba(0,0,0,0.35));}
   .bridge{position:absolute; width:10%; height:40px; background:#8b6b3a; border:2px solid #6b4a23; border-radius:2px; transform:translate(-50%,-50%); z-index:5;}
   #mapPinsLayer{position:absolute; inset:0; z-index:2;}
-  .car-dot{position:absolute; left:20%; top:75%; font-size:1.5rem; transition:left 0.65s linear, top 0.65s linear; z-index:3;}
+  .car-dot{position:absolute; left:24%; top:72%; font-size:1.5rem; transition:left 0.65s linear, top 0.65s linear; z-index:3;}
   .map-pin{position:absolute; transform:translate(-50%,-50%); display:flex; flex-direction:column; align-items:center; gap:2px; background:none; border:none; cursor:pointer; z-index:2; padding:0;}
   .map-pin .pin-emo{font-size:1.4rem; filter:drop-shadow(0 2px 2px rgba(0,0,0,0.35));}
   .map-pin .pin-label{font-size:0.5rem; font-weight:bold; color:#1f2937; background:rgba(255,255,255,0.9); border-radius:6px; padding:1px 4px; white-space:nowrap; line-height:1.3;}
@@ -120,6 +120,19 @@
   .progress-fill{height:100%; width:35%; background:#e5e7eb; border-radius:3px;}
   .player-controls{display:flex; gap:16px; margin-top:4px;}
   .player-controls button{background:none; border:none; font-size:1.5rem; color:#e5e7eb; cursor:pointer;}
+  .volume-row{display:flex; align-items:center; gap:8px; width:70%; max-width:200px;}
+  .volume-row #volIcon{font-size:1.1rem;}
+  .volume-row input[type="range"]{
+    flex:1; -webkit-appearance:none; appearance:none; height:6px; border-radius:3px;
+    background:rgba(255,255,255,0.25); outline:none;
+  }
+  .volume-row input[type="range"]::-webkit-slider-thumb{
+    -webkit-appearance:none; width:18px; height:18px; border-radius:50%;
+    background:#d6336c; border:2px solid #fff; cursor:pointer;
+  }
+  .volume-row input[type="range"]::-moz-range-thumb{
+    width:18px; height:18px; border-radius:50%; background:#d6336c; border:2px solid #fff; cursor:pointer;
+  }
   .playlist-row{display:flex; gap:6px; margin-top:6px; flex-wrap:wrap; justify-content:center; padding:0 8px;}
   .playlist-pick{background:rgba(255,255,255,0.12); border:none; border-radius:8px; padding:5px 8px; font-size:0.75rem; color:#e5e7eb; cursor:pointer; font-family:inherit;}
   .playlist-pick.selected{background:#d6336c;}
@@ -233,6 +246,10 @@
           <button id="musicPrev">⏮</button>
           <button id="musicPlay">▶️</button>
           <button id="musicNext">⏭</button>
+        </div>
+        <div class="volume-row">
+          <span id="volIcon">🔊</span>
+          <input type="range" id="volumeSlider" min="0" max="100" value="70">
         </div>
         <div class="playlist-row" id="playlistRow"></div>
       </div>
@@ -402,9 +419,10 @@ function resetAppStates(){
   driveToken++;
   document.getElementById("navBanner").style.display = "none";
   document.getElementById("trafficBadge").style.display = "none";
+  carPos = { x: 24, y: 72, axis: "x" };
   const mapCarDot = document.getElementById("mapCarDot");
-  mapCarDot.style.left = "20%";
-  mapCarDot.style.top = "75%";
+  mapCarDot.style.left = carPos.x + "%";
+  mapCarDot.style.top = carPos.y + "%";
 }
 
 function showCarScreen(id){
@@ -447,16 +465,39 @@ function nearestOf(value, options){
   return options.reduce((a, b) => Math.abs(b - value) < Math.abs(a - value) ? b : a);
 }
 
-function buildRoute(start, dest){
-  const hy = nearestOf(start.y, STREET_Y);
-  const vx = nearestOf(dest.x, STREET_X);
-  return [
-    { x: start.x, y: hy },
-    { x: vx,      y: hy },
-    { x: vx,      y: dest.y },
-    { x: dest.x,  y: dest.y },
-  ];
+// Every road band spans the full width (horizontal streets) or full height
+// (vertical streets), so a point stays on-road for an entire move as long as
+// ONE coordinate is held fixed at a STREET_X/STREET_Y value. curbPointFor()
+// projects a destination onto whichever nearby street is closer, so the car
+// never has to leave the road grid to "arrive" somewhere.
+function curbPointFor(place){
+  const px = parseFloat(place.left), py = parseFloat(place.top);
+  const vx = nearestOf(px, STREET_X);
+  const hy = nearestOf(py, STREET_Y);
+  if (Math.abs(px - vx) <= Math.abs(py - hy)){
+    return { x: vx, y: py, axis: "x" }; // parks along a vertical street
+  }
+  return { x: px, y: hy, axis: "y" }; // parks along a horizontal street
 }
+
+function buildRoute(start, dest){
+  if (start.axis === "y" && dest.axis === "y"){
+    if (start.y === dest.y) return [{ x: dest.x, y: start.y }];
+    const vx = nearestOf(dest.x, STREET_X);
+    return [{ x: vx, y: start.y }, { x: vx, y: dest.y }, { x: dest.x, y: dest.y }];
+  }
+  if (start.axis === "x" && dest.axis === "x"){
+    if (start.x === dest.x) return [{ x: start.x, y: dest.y }];
+    const hy = nearestOf(dest.y, STREET_Y);
+    return [{ x: start.x, y: hy }, { x: dest.x, y: hy }, { x: dest.x, y: dest.y }];
+  }
+  if (start.axis === "y" && dest.axis === "x"){
+    return [{ x: dest.x, y: start.y }, { x: dest.x, y: dest.y }];
+  }
+  return [{ x: start.x, y: dest.y }, { x: dest.x, y: dest.y }]; // start.axis === "x", dest.axis === "y"
+}
+
+let carPos = { x: 24, y: 72, axis: "x" };
 
 function goToDestination(place){
   tone(880, 0, 0.1, "sine", 0.15);
@@ -468,9 +509,9 @@ function goToDestination(place){
   const banner = document.getElementById("navBanner");
   const badge = document.getElementById("trafficBadge");
 
-  const start = { x: parseFloat(dot.style.left) || 20, y: parseFloat(dot.style.top) || 75 };
-  const dest = { x: parseFloat(place.left), y: parseFloat(place.top) };
-  const route = buildRoute(start, dest);
+  const dest = curbPointFor(place);
+  const route = buildRoute(carPos, dest);
+  carPos = dest;
 
   const traffic = TRAFFIC_LEVELS[Math.floor(Math.random() * TRAFFIC_LEVELS.length)];
   const arrival = new Date(Date.now() + place.minutes * 60000);
@@ -595,10 +636,22 @@ function startMusicLoop(){
   const notes = PLAYLIST[songIndex].notes;
   let i = 0;
   musicInterval = setInterval(() => {
-    tone(notes[i % notes.length], 0, 0.35, "sine", 0.1);
+    tone(notes[i % notes.length], 0, 0.35, "sine", 0.1 * musicVolume);
     i++;
   }, 450);
 }
+
+let musicVolume = 0.7;
+const volumeSlider = document.getElementById("volumeSlider");
+const volIcon = document.getElementById("volIcon");
+function updateVolIcon(){
+  volIcon.textContent = musicVolume === 0 ? "🔇" : musicVolume < 0.34 ? "🔈" : musicVolume < 0.7 ? "🔉" : "🔊";
+}
+volumeSlider.addEventListener("input", () => {
+  musicVolume = volumeSlider.value / 100;
+  updateVolIcon();
+});
+updateVolIcon();
 
 document.getElementById("musicPlay").addEventListener("click", () => {
   musicPlaying = !musicPlaying;
