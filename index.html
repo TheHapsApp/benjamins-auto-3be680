@@ -75,6 +75,7 @@
   .crosswalk.horiz{width:8%; height:16px; transform:translate(-50%,-50%); background:repeating-linear-gradient(90deg,#fff 0 4px, transparent 4px 10px);}
   .crosswalk.vert{width:16px; height:8%; transform:translate(-50%,-50%); background:repeating-linear-gradient(0deg,#fff 0 4px, transparent 4px 10px);}
   .street-sign{position:absolute; font-size:1.3rem; transform:translate(-50%,-50%); z-index:1; filter:drop-shadow(0 1px 1px rgba(0,0,0,0.35));}
+  .bridge{position:absolute; width:9%; height:16px; background:#8b6b3a; border:2px solid #6b4a23; border-radius:2px; transform:translate(-50%,-50%); z-index:5;}
   #mapPinsLayer{position:absolute; inset:0; z-index:2;}
   .car-dot{position:absolute; left:20%; top:75%; font-size:1.5rem; transition:left 2s ease, top 2s ease; z-index:3;}
   .map-pin{position:absolute; transform:translate(-50%,-50%); display:flex; flex-direction:column; align-items:center; gap:2px; background:none; border:none; cursor:pointer; z-index:2; padding:0;}
@@ -236,7 +237,9 @@
         <div class="street-sign" style="left:24%; top:72%;">🛑</div>
         <div class="street-sign" style="left:70%; top:72%;">🛑</div>
         <div class="street-sign" style="left:33%; top:54%;">🚸</div>
-        <div class="street-sign" style="left:47%; top:46%;">🚸</div>
+        <div class="street-sign" style="left:47%; top:29%;">🚸</div>
+        <div class="bridge" style="left:24%; top:44%;"></div>
+        <div class="bridge" style="left:70%; top:44%;"></div>
         <div id="mapPinsLayer"></div>
         <div class="car-dot" id="mapCarDot">🚙</div>
       </div>
@@ -362,15 +365,17 @@ backBtn.addEventListener("click", () => showCarScreen("home"));
 
 // ---------- maps ----------
 const MAP_PLACES = [
-  { id:"home",     emo:"🏠", name:"Home",                left:"85%", top:"15%", minutes:12 },
-  { id:"icecream", emo:"🍦", name:"Frosty's Ice Cream",   left:"45%", top:"15%", minutes:6 },
-  { id:"pizza",    emo:"🍕", name:"Pete's Pizza",         left:"10%", top:"15%", minutes:5 },
-  { id:"friend",   emo:"🏡", name:"Friend's House",       left:"10%", top:"52%", minutes:4 },
-  { id:"grocery",  emo:"🛒", name:"Fresh Mart",           left:"85%", top:"52%", minutes:7 },
-  { id:"pool",     emo:"🏊", name:"Splash Pool",          left:"85%", top:"86%", minutes:9 },
-  { id:"pond1",    emo:"🪷", name:"Willow Pond",          left:"45%", top:"86%", minutes:8, water:"pond" },
-  { id:"pond2",    emo:"🦆", name:"Duck Pond",            left:"10%", top:"86%", minutes:8, water:"pond" },
-  { id:"river",    emo:"🌊", name:"Rushing River",        left:"50%", top:"97%", minutes:10, water:"river" },
+  { id:"home",       emo:"🏠", name:"Home",                  left:"85%", top:"15%", minutes:12 },
+  { id:"icecream",   emo:"🍦", name:"Frosty's Ice Cream",     left:"45%", top:"15%", minutes:6 },
+  { id:"pizza",      emo:"🍕", name:"Pete's Pizza",           left:"10%", top:"15%", minutes:5 },
+  { id:"bestfriend", emo:"🏡", name:"Best Friend's House",    left:"10%", top:"52%", minutes:4 },
+  { id:"grandma",    emo:"👵", name:"Grandma's House",        left:"10%", top:"64%", minutes:9 },
+  { id:"grocery",    emo:"🛒", name:"Fresh Mart",             left:"85%", top:"52%", minutes:7 },
+  { id:"grandpa",    emo:"👴", name:"Grandpa's House",        left:"85%", top:"64%", minutes:9 },
+  { id:"pool",       emo:"🏊", name:"Splash Pool",            left:"85%", top:"86%", minutes:9 },
+  { id:"pond1",      emo:"🪷", name:"Willow Pond",            left:"45%", top:"86%", minutes:8, water:"pond" },
+  { id:"pond2",      emo:"🦆", name:"Duck Pond",              left:"10%", top:"86%", minutes:8, water:"pond" },
+  { id:"river",      emo:"🌊", name:"Rushing River",          left:"50%", top:"44%", minutes:10, water:"river" },
 ];
 
 function goToDestination(place){
@@ -413,10 +418,14 @@ document.getElementById("homeShortcutBtn").addEventListener("click", () => {
 
 // ---------- music ----------
 const PLAYLIST = [
-  { title:"Turbo Beat",      artist:"The Motorheads",   emo:"🎸", notes:[196.00,246.94,293.66,246.94] },
-  { title:"Desert Drive",    artist:"Fast Lane Five",   emo:"🏜️", notes:[220.00,261.63,329.63,261.63] },
-  { title:"Pit Stop Party",  artist:"Gear Shift Crew",  emo:"🎉", notes:[392.00,440.00,523.25,440.00] },
-  { title:"Night Cruise",    artist:"Midnight Riders",  emo:"🌙", notes:[293.66,349.23,392.00,349.23] },
+  { title:"Turbo Beat",       artist:"The Motorheads",   emo:"🎸", notes:[196.00,246.94,293.66,246.94] },
+  { title:"Desert Drive",     artist:"Fast Lane Five",   emo:"🏜️", notes:[220.00,261.63,329.63,261.63] },
+  { title:"Pit Stop Party",   artist:"Gear Shift Crew",  emo:"🎉", notes:[392.00,440.00,523.25,440.00] },
+  { title:"Night Cruise",     artist:"Midnight Riders",  emo:"🌙", notes:[293.66,349.23,392.00,349.23] },
+  { title:"Highway Anthem",   artist:"Road Trip Rockers", emo:"🛣️", notes:[246.94,293.66,349.23,293.66] },
+  { title:"Rev It Up",        artist:"The Speedsters",   emo:"🔧", notes:[261.63,329.63,392.00,329.63] },
+  { title:"Backseat Boogie",  artist:"Carpool Crew",     emo:"🎶", notes:[220.00,277.18,329.63,277.18] },
+  { title:"Sunday Drive",     artist:"The Cruisers",     emo:"☀️", notes:[196.00,233.08,277.18,233.08] },
 ];
 let songIndex = 0;
 
@@ -481,6 +490,7 @@ const CONTACTS = [
   { name:"Mom",         emo:"👩", msg:"Hi honey, love you! ❤️" },
   { name:"Dad",         emo:"👨", msg:"Hey buddy, great job! 👍" },
   { name:"Grandma",     emo:"👵", msg:"I baked cookies for you! 🍪" },
+  { name:"Grandpa",     emo:"👴", msg:"Let's go fishing soon! 🎣" },
   { name:"Best Friend", emo:"🧒", msg:"Wanna play after school? 🎮" },
 ];
 function formatTime(s){
