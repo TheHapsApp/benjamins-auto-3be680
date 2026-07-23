@@ -473,7 +473,9 @@ function goToDestination(place){
   const route = buildRoute(start, dest);
 
   const traffic = TRAFFIC_LEVELS[Math.floor(Math.random() * TRAFFIC_LEVELS.length)];
-  badge.textContent = place.minutes + " min";
+  const arrival = new Date(Date.now() + place.minutes * 60000);
+  const arrivalStr = arrival.toLocaleTimeString([], { hour:"2-digit", minute:"2-digit" });
+  badge.textContent = place.minutes + " min · arrive " + arrivalStr;
   badge.className = "traffic-badge " + traffic.cls;
   badge.style.display = "block";
 
@@ -750,7 +752,7 @@ function startCall(contact){
 
 function scheduleIncomingCall(){
   clearTimeout(incomingCallTimeout);
-  incomingCallTimeout = setTimeout(triggerIncomingCall, 6000 + Math.random() * 8000);
+  incomingCallTimeout = setTimeout(triggerIncomingCall, 45000 + Math.random() * 60000);
 }
 function triggerIncomingCall(){
   if (document.getElementById("phoneIdle").style.display !== "flex"){
