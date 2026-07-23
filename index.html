@@ -85,14 +85,33 @@
   .water-pond{position:absolute; width:56px; height:38px; border-radius:50%; background:radial-gradient(circle at 35% 30%, #8ed4f0, #2f7fb8); box-shadow:inset 0 0 8px rgba(0,0,0,0.2); transform:translate(-50%,-50%); z-index:1;}
   .water-river{position:absolute; width:60%; height:30px; background:linear-gradient(90deg,#8ed4f0,#4fa8ff 40%,#2f7fb8 70%,#8ed4f0); border-radius:30px; transform:translate(-50%,-50%) rotate(-3deg); z-index:1; opacity:0.9; overflow:hidden;}
   .water-river::after{content:""; position:absolute; inset:0; background:repeating-linear-gradient(90deg, rgba(255,255,255,0.5) 0 8px, transparent 8px 18px);}
-  .map-topbar{position:absolute; top:8px; right:8px; z-index:3;}
+  .map-topbar{position:absolute; top:46px; right:8px; z-index:3;}
   .home-shortcut{background:#fff; border:none; border-radius:999px; padding:7px 12px; font-weight:bold; font-size:0.8rem; color:#1a73e8; cursor:pointer; font-family:inherit;}
   .home-shortcut:active{transform:translateY(1px);}
-  .season-picker{position:absolute; top:8px; left:8px; display:flex; gap:4px; z-index:4;}
+  .season-picker{position:absolute; top:46px; left:8px; display:flex; gap:4px; z-index:4;}
   .season-btn{width:26px; height:26px; border-radius:50%; border:2px solid #fff; background:rgba(255,255,255,0.25); font-size:0.85rem; display:flex; align-items:center; justify-content:center; cursor:pointer; padding:0;}
   .season-btn.selected{background:#fff; box-shadow:0 0 0 2px #4fa8ff;}
   .season-btn:active{transform:translateY(1px);}
   .season-tree{position:absolute; font-size:1.4rem; z-index:1; pointer-events:none; transform:translate(-50%,-50%);}
+  .search-bar-row{position:absolute; top:8px; left:8px; right:8px; z-index:6;}
+  .search-input{
+    width:100%; box-sizing:border-box; background:rgba(255,255,255,0.95); border:none; border-radius:999px;
+    padding:8px 14px; font-size:0.8rem; font-family:inherit; color:#333;
+  }
+  .search-input:focus{outline:2px solid #4fa8ff;}
+  .search-results{
+    display:none; position:absolute; top:40px; left:8px; right:8px; z-index:6;
+    background:rgba(17,24,39,0.97); border-radius:12px; max-height:55%; overflow-y:auto;
+  }
+  .search-results.open{display:block;}
+  .search-result-item{
+    display:flex; align-items:center; gap:8px; padding:8px 12px; color:#e5e7eb;
+    font-size:0.8rem; font-weight:bold; cursor:pointer; border-bottom:1px solid rgba(255,255,255,0.08);
+  }
+  .search-result-item:last-child{border-bottom:none;}
+  .search-result-item:active{background:rgba(255,255,255,0.12);}
+  .search-result-emo{font-size:1.1rem;}
+  .search-no-results{padding:10px 12px; color:#e5e7eb; opacity:0.7; font-size:0.78rem; text-align:center;}
   .nav-banner{
     position:absolute; bottom:8px; left:8px; right:8px; background:rgba(0,0,0,0.7); color:#fff;
     padding:8px; border-radius:10px; text-align:center; font-size:0.8rem; z-index:3; display:none;
@@ -295,6 +314,10 @@
         <div id="mapPinsLayer"></div>
         <div class="car-dot" id="mapCarDot">🚙</div>
       </div>
+      <div class="search-bar-row">
+        <input type="text" class="search-input" id="searchInput" placeholder="🔍 Search a place..." autocomplete="off">
+      </div>
+      <div class="search-results" id="searchResults"></div>
       <div class="season-picker" id="seasonPicker">
         <button class="season-btn" data-season="spring">🌸</button>
         <button class="season-btn" data-season="summer">☀️</button>
@@ -435,6 +458,9 @@ function resetAppStates(){
   driveToken++;
   document.getElementById("navBanner").style.display = "none";
   document.getElementById("trafficBadge").style.display = "none";
+  searchInput.value = "";
+  searchResults.classList.remove("open");
+  searchResults.innerHTML = "";
   carPos = { x: 18, y: 80, axis: "x" };
   const mapCarDot = document.getElementById("mapCarDot");
   mapCarDot.style.left = carPos.x + "%";
@@ -599,6 +625,46 @@ renderMapPins();
 
 document.getElementById("homeShortcutBtn").addEventListener("click", () => {
   goToDestination(MAP_PLACES.find(p => p.id === "home"));
+});
+
+// ---------- map search ----------
+const searchInput = document.getElementById("searchInput");
+const searchResults = document.getElementById("searchResults");
+
+function renderSearchResults(query){
+  const q = query.trim().toLowerCase();
+  searchResults.innerHTML = "";
+  if (!q){
+    searchResults.classList.remove("open");
+    return;
+  }
+  const matches = MAP_PLACES.filter(p => p.name.toLowerCase().includes(q));
+  if (matches.length === 0){
+    searchResults.innerHTML = '<div class="search-no-results">No places found</div>';
+  } else {
+    matches.forEach(place => {
+      const row = document.createElement("div");
+      row.className = "search-result-item";
+      row.innerHTML = `<span class="search-result-emo">${place.emo}</span><span>${place.name}</span>`;
+      row.addEventListener("click", () => {
+        tone(700, 0, 0.08, "triangle", 0.1);
+        searchInput.value = "";
+        searchResults.classList.remove("open");
+        searchResults.innerHTML = "";
+        searchInput.blur();
+        goToDestination(place);
+      });
+      searchResults.appendChild(row);
+    });
+  }
+  searchResults.classList.add("open");
+}
+searchInput.addEventListener("input", () => renderSearchResults(searchInput.value));
+searchInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter"){
+    const first = searchResults.querySelector(".search-result-item");
+    if (first) first.click();
+  }
 });
 
 // ---------- seasons ----------
