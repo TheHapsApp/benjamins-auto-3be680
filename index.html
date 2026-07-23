@@ -88,6 +88,11 @@
   .map-topbar{position:absolute; top:8px; right:8px; z-index:3;}
   .home-shortcut{background:#fff; border:none; border-radius:999px; padding:7px 12px; font-weight:bold; font-size:0.8rem; color:#1a73e8; cursor:pointer; font-family:inherit;}
   .home-shortcut:active{transform:translateY(1px);}
+  .season-picker{position:absolute; top:8px; left:8px; display:flex; gap:4px; z-index:4;}
+  .season-btn{width:26px; height:26px; border-radius:50%; border:2px solid #fff; background:rgba(255,255,255,0.25); font-size:0.85rem; display:flex; align-items:center; justify-content:center; cursor:pointer; padding:0;}
+  .season-btn.selected{background:#fff; box-shadow:0 0 0 2px #4fa8ff;}
+  .season-btn:active{transform:translateY(1px);}
+  .season-tree{position:absolute; font-size:1.4rem; z-index:1; pointer-events:none; transform:translate(-50%,-50%);}
   .nav-banner{
     position:absolute; bottom:8px; left:8px; right:8px; background:rgba(0,0,0,0.7); color:#fff;
     padding:8px; border-radius:10px; text-align:center; font-size:0.8rem; z-index:3; display:none;
@@ -243,8 +248,18 @@
         <div class="street-sign" style="left:47%; top:29%;">🚸</div>
         <div class="bridge" style="left:24%; top:44%;"></div>
         <div class="bridge" style="left:70%; top:44%;"></div>
+        <span class="season-tree" style="left:4%; top:6%;">🌳</span>
+        <span class="season-tree" style="left:96%; top:6%;">🌳</span>
+        <span class="season-tree" style="left:4%; top:94%;">🌳</span>
+        <span class="season-tree" style="left:96%; top:94%;">🌳</span>
         <div id="mapPinsLayer"></div>
         <div class="car-dot" id="mapCarDot">🚙</div>
+      </div>
+      <div class="season-picker" id="seasonPicker">
+        <button class="season-btn" data-season="spring">🌸</button>
+        <button class="season-btn" data-season="summer">☀️</button>
+        <button class="season-btn" data-season="fall">🍂</button>
+        <button class="season-btn" data-season="winter">❄️</button>
       </div>
       <div class="map-topbar">
         <button class="home-shortcut" id="homeShortcutBtn">🏠 Home</button>
@@ -427,6 +442,32 @@ document.getElementById("homeShortcutBtn").addEventListener("click", () => {
   goToDestination(MAP_PLACES.find(p => p.id === "home"));
 });
 
+// ---------- seasons ----------
+const SEASONS = {
+  spring: { bg:"#cdeba0", pond:"radial-gradient(circle at 35% 30%, #9fdcef, #3f9fd8)", river:"linear-gradient(90deg,#9fdcef,#5fb8ea 40%,#3f9fd8 70%,#9fdcef)", tree:"🌸" },
+  summer: { bg:"#dbe9d8", pond:"radial-gradient(circle at 35% 30%, #8ed4f0, #2f7fb8)", river:"linear-gradient(90deg,#8ed4f0,#4fa8ff 40%,#2f7fb8 70%,#8ed4f0)", tree:"🌳" },
+  fall:   { bg:"#eddcae", pond:"radial-gradient(circle at 35% 30%, #8ed4f0, #2f7fb8)", river:"linear-gradient(90deg,#8ed4f0,#4fa8ff 40%,#2f7fb8 70%,#8ed4f0)", tree:"🍁" },
+  winter: { bg:"#eef4f8", pond:"radial-gradient(circle at 35% 30%, #eaf6fb, #cfe8f2)", river:"linear-gradient(90deg,#eaf6fb,#d8eef5 40%,#cfe8f2 70%,#eaf6fb)", tree:"❄️" },
+};
+let currentSeason = "summer";
+
+function applySeason(season){
+  currentSeason = season;
+  const cfg = SEASONS[season];
+  document.querySelector(".map-bg").style.background = cfg.bg;
+  document.querySelectorAll(".water-pond").forEach(el => { el.style.background = cfg.pond; });
+  document.querySelectorAll(".water-river").forEach(el => { el.style.background = cfg.river; });
+  document.querySelectorAll(".season-tree").forEach(el => { el.textContent = cfg.tree; });
+  document.querySelectorAll(".season-btn").forEach(b => b.classList.toggle("selected", b.dataset.season === season));
+}
+document.querySelectorAll(".season-btn").forEach(b => {
+  b.addEventListener("click", () => {
+    tone(600, 0, 0.1, "triangle", 0.1);
+    applySeason(b.dataset.season);
+  });
+});
+applySeason(currentSeason);
+
 // ---------- music ----------
 const PLAYLIST = [
   { title:"Turbo Beat",       artist:"The Motorheads",   emo:"🎸", notes:[196.00,246.94,293.66,246.94] },
@@ -498,35 +539,89 @@ renderPlaylistRow();
 
 // ---------- phone ----------
 const CONTACTS = [
-  { name:"Mom", emo:"👩", script:{
-      question:"Can you help set the table for dinner?",
-      options:[{ label:"Sure Mom! 👍", reply:"Sure Mom!" }, { label:"In a minute", reply:"In a minute!" }],
-      response:"Thanks, sweetie!", bye:"Bye!"
+  { name:"Mom", emo:"👩", bye:"Bye!", bySeason:{
+      spring: { question:"Want to plant flowers in the garden?",
+        options:[{ label:"Yes let's plant! 🌱", reply:"Yes let's plant!", response:"Yay, grab your gloves!" },
+                 { label:"Maybe later", reply:"Maybe later", response:"Okay, they'll wait for us!" }] },
+      summer: { question:"Can you help set the table for dinner?",
+        options:[{ label:"Sure Mom! 👍", reply:"Sure Mom!", response:"Thanks, sweetie!" },
+                 { label:"In a minute", reply:"In a minute!", response:"Okay, don't forget!" }] },
+      fall:   { question:"Want to rake leaves with me?",
+        options:[{ label:"Sure! 🍂", reply:"Sure!", response:"Great, bring your jacket!" },
+                 { label:"Not right now", reply:"Not right now", response:"Okay, later then!" }] },
+      winter: { question:"Want to bake cookies for the holidays?",
+        options:[{ label:"Yes please! 🍪", reply:"Yes please!", response:"Yay, I'll get the mixer!" },
+                 { label:"Maybe tomorrow", reply:"Maybe tomorrow", response:"Okay, sounds good!" }] },
   }},
-  { name:"Dad", emo:"👨", script:{
-      question:"Want to shoot some hoops later?",
-      options:[{ label:"Heck yeah! 🏀", reply:"Heck yeah!" }, { label:"Not today", reply:"Not today, Dad" }],
-      response:"Sounds good!", bye:"Goodbye!"
+  { name:"Dad", emo:"👨", bye:"Goodbye!", bySeason:{
+      spring: { question:"Want to fly a kite at the park?",
+        options:[{ label:"Heck yeah! 🪁", reply:"Heck yeah!", response:"Awesome, let's go!" },
+                 { label:"Not today", reply:"Not today, Dad", response:"Okay, next time!" }] },
+      summer: { question:"Want to shoot some hoops later?",
+        options:[{ label:"Heck yeah! 🏀", reply:"Heck yeah!", response:"Sounds good!" },
+                 { label:"Not today", reply:"Not today, Dad", response:"No worries!" }] },
+      fall:   { question:"Want to go apple picking?",
+        options:[{ label:"Yes! 🍎", reply:"Yes!", response:"Great, grab a basket!" },
+                 { label:"Not today", reply:"Not today, Dad", response:"Okay, another time!" }] },
+      winter: { question:"Want to build a snowman?",
+        options:[{ label:"Yes! ⛄", reply:"Yes!", response:"Let's do it!" },
+                 { label:"Too cold", reply:"Too cold, Dad", response:"Ha, fair enough!" }] },
   }},
-  { name:"Grandma", emo:"👵", script:{
-      question:"Want to come over for cookies this weekend?",
-      options:[{ label:"Yes please! 🍪", reply:"Yes please!" }, { label:"Maybe next time", reply:"Maybe next time" }],
-      response:"Okay dear!", bye:"Bye bye!"
+  { name:"Grandma", emo:"👵", bye:"Bye bye!", bySeason:{
+      spring: { question:"Want to come see my garden bloom?",
+        options:[{ label:"Yes please! 🌷", reply:"Yes please!", response:"Wonderful, see you soon!" },
+                 { label:"Maybe next time", reply:"Maybe next time", response:"Okay dear!" }] },
+      summer: { question:"Want to come over for cookies this weekend?",
+        options:[{ label:"Yes please! 🍪", reply:"Yes please!", response:"Okay dear!" },
+                 { label:"Maybe next time", reply:"Maybe next time", response:"Alright, another time!" }] },
+      fall:   { question:"Want to help me bake a pumpkin pie?",
+        options:[{ label:"Yes please! 🎃", reply:"Yes please!", response:"Yay, wear your apron!" },
+                 { label:"Maybe next time", reply:"Maybe next time", response:"Okay dear!" }] },
+      winter: { question:"Want to come decorate the tree with me?",
+        options:[{ label:"Yes please! 🎄", reply:"Yes please!", response:"I'll put the kettle on!" },
+                 { label:"Maybe next time", reply:"Maybe next time", response:"Okay dear!" }] },
   }},
-  { name:"Grandpa", emo:"👴", script:{
-      question:"Ready to go fishing Saturday?",
-      options:[{ label:"Can't wait! 🎣", reply:"Can't wait!" }, { label:"We'll see", reply:"We'll see" }],
-      response:"Alright!", bye:"Goodbye!"
+  { name:"Grandpa", emo:"👴", bye:"Goodbye!", bySeason:{
+      spring: { question:"Want to help me plant tomatoes?",
+        options:[{ label:"Can't wait! 🍅", reply:"Can't wait!", response:"Great, grab a shovel!" },
+                 { label:"We'll see", reply:"We'll see", response:"Alright!" }] },
+      summer: { question:"Ready to go fishing Saturday?",
+        options:[{ label:"Can't wait! 🎣", reply:"Can't wait!", response:"Alright!" },
+                 { label:"We'll see", reply:"We'll see", response:"Okay, let me know!" }] },
+      fall:   { question:"Want to rake leaves into a big pile?",
+        options:[{ label:"Can't wait! 🍁", reply:"Can't wait!", response:"Ha, let's jump in it after!" },
+                 { label:"We'll see", reply:"We'll see", response:"Alright!" }] },
+      winter: { question:"Want to go sledding this weekend?",
+        options:[{ label:"Can't wait! 🛷", reply:"Can't wait!", response:"Woo-hoo, see you there!" },
+                 { label:"We'll see", reply:"We'll see", response:"Okay, bundle up either way!" }] },
   }},
-  { name:"Jake", emo:"👦", script:{
-      question:"Wanna play after school?",
-      options:[{ label:"Sure! 👍", reply:"Sure!" }, { label:"Maybe later", reply:"Maybe later after school" }],
-      response:"Cool!", bye:"Bye!"
+  { name:"Jake", emo:"👦", bye:"Bye!", bySeason:{
+      spring: { question:"Wanna fly kites after school?",
+        options:[{ label:"Sure! 🪁", reply:"Sure!", response:"Awesome!" },
+                 { label:"Maybe later", reply:"Maybe later after school", response:"Okay, later then!" }] },
+      summer: { question:"Wanna play after school?",
+        options:[{ label:"Sure! 👍", reply:"Sure!", response:"Cool!" },
+                 { label:"Maybe later", reply:"Maybe later after school", response:"Okay, no biggie!" }] },
+      fall:   { question:"Wanna jump in leaf piles?",
+        options:[{ label:"Sure! 🍂", reply:"Sure!", response:"Cool, let's go!" },
+                 { label:"Maybe later", reply:"Maybe later after school", response:"Okay, later!" }] },
+      winter: { question:"Wanna have a snowball fight?",
+        options:[{ label:"Sure! ❄️", reply:"Sure!", response:"Yes! Get ready!" },
+                 { label:"Maybe later", reply:"Maybe later after school", response:"Okay, fine!" }] },
   }},
-  { name:"Ava", emo:"👧", script:{
-      question:"Want to ride bikes today?",
-      options:[{ label:"Let's go! 🚲", reply:"Let's go!" }, { label:"Not right now", reply:"Not right now" }],
-      response:"Okay!", bye:"Goodbye!"
+  { name:"Ava", emo:"👧", bye:"Goodbye!", bySeason:{
+      spring: { question:"Want to ride bikes and see the flowers?",
+        options:[{ label:"Let's go! 🌸", reply:"Let's go!", response:"Yay, see you soon!" },
+                 { label:"Not right now", reply:"Not right now", response:"Okay, another time!" }] },
+      summer: { question:"Want to ride bikes today?",
+        options:[{ label:"Let's go! 🚲", reply:"Let's go!", response:"Okay!" },
+                 { label:"Not right now", reply:"Not right now", response:"Alright, later then!" }] },
+      fall:   { question:"Want to go on a hayride?",
+        options:[{ label:"Let's go! 🌾", reply:"Let's go!", response:"Yay, so fun!" },
+                 { label:"Not right now", reply:"Not right now", response:"Okay, another time!" }] },
+      winter: { question:"Want to go ice skating?",
+        options:[{ label:"Let's go! ⛸️", reply:"Let's go!", response:"Yes! See you there!" },
+                 { label:"Not right now", reply:"Not right now", response:"Okay, no worries!" }] },
   }},
 ];
 function formatTime(s){
@@ -578,7 +673,7 @@ function connectCall(contact){
   optsEl.innerHTML = "";
   hangupBtn.style.display = "";
 
-  const script = contact.script;
+  const script = contact.bySeason[currentSeason];
   msgEl.textContent = contact.name + ": " + script.question;
   script.options.forEach(opt => {
     const btn = document.createElement("button");
@@ -591,10 +686,10 @@ function connectCall(contact){
       msgEl.textContent = "You: " + opt.reply;
       scriptTimeout1 = setTimeout(() => {
         tone(700, 0, 0.15, "sine", 0.12);
-        msgEl.textContent = contact.name + ": " + script.response;
+        msgEl.textContent = contact.name + ": " + opt.response;
       }, 1100);
       scriptTimeout2 = setTimeout(() => {
-        msgEl.textContent = contact.name + ": " + script.bye;
+        msgEl.textContent = contact.name + ": " + contact.bye;
       }, 2400);
       scriptTimeout3 = setTimeout(endCall, 3800);
     });
