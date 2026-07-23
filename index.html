@@ -36,7 +36,7 @@
 
   /* ---- car screen bezel ---- */
   .dashboard{
-    max-width:760px; margin:0 auto; aspect-ratio:4/3;
+    max-width:980px; margin:0 auto; aspect-ratio:1/1;
     background:#111827; border-radius:26px; border:10px solid #2a2a35;
     box-shadow:0 10px 0 rgba(0,0,0,0.25), 0 0 0 3px rgba(255,255,255,0.15);
     position:relative; overflow:hidden;
@@ -77,7 +77,7 @@
   .street-sign{position:absolute; font-size:1.3rem; transform:translate(-50%,-50%); z-index:1; filter:drop-shadow(0 1px 1px rgba(0,0,0,0.35));}
   .bridge{position:absolute; width:10%; height:40px; background:#8b6b3a; border:2px solid #6b4a23; border-radius:2px; transform:translate(-50%,-50%); z-index:5;}
   #mapPinsLayer{position:absolute; inset:0; z-index:2;}
-  .car-dot{position:absolute; left:24%; top:72%; font-size:1.5rem; transition:left 0.65s linear, top 0.65s linear; z-index:3;}
+  .car-dot{position:absolute; left:18%; top:80%; font-size:1.5rem; transition:left 0.75s linear, top 0.75s linear; z-index:3;}
   .map-pin{position:absolute; transform:translate(-50%,-50%); display:flex; flex-direction:column; align-items:center; gap:2px; background:none; border:none; cursor:pointer; z-index:2; padding:0;}
   .map-pin .pin-emo{font-size:1.4rem; filter:drop-shadow(0 2px 2px rgba(0,0,0,0.35));}
   .map-pin .pin-label{font-size:0.5rem; font-weight:bold; color:#1f2937; background:rgba(255,255,255,0.9); border-radius:6px; padding:1px 4px; white-space:nowrap; line-height:1.3;}
@@ -258,24 +258,40 @@
     <!-- ==== MAPS ==== -->
     <div class="car-screen" id="screen-maps">
       <div class="map-bg">
-        <div class="road-v" style="left:20%;"></div>
-        <div class="road-v" style="left:66%;"></div>
-        <div class="road-h" style="top:32%;"></div>
-        <div class="road-h" style="top:68%;"></div>
-        <div class="crosswalk horiz" style="left:24%; top:54%;"></div>
-        <div class="crosswalk vert" style="left:47%; top:36%;"></div>
-        <div class="street-sign" style="left:24%; top:36%;">🛑</div>
-        <div class="street-sign" style="left:70%; top:36%;">🛑</div>
-        <div class="street-sign" style="left:24%; top:72%;">🛑</div>
-        <div class="street-sign" style="left:70%; top:72%;">🛑</div>
-        <div class="street-sign" style="left:33%; top:54%;">🚸</div>
-        <div class="street-sign" style="left:47%; top:29%;">🚸</div>
-        <div class="bridge" style="left:24%; top:44%;"></div>
-        <div class="bridge" style="left:70%; top:44%;"></div>
-        <span class="season-tree" style="left:4%; top:6%;">🌳</span>
-        <span class="season-tree" style="left:96%; top:6%;">🌳</span>
-        <span class="season-tree" style="left:4%; top:94%;">🌳</span>
-        <span class="season-tree" style="left:96%; top:94%;">🌳</span>
+        <div class="road-v" style="left:14%;"></div>
+        <div class="road-v" style="left:46%;"></div>
+        <div class="road-v" style="left:78%;"></div>
+        <div class="road-h" style="top:16%;"></div>
+        <div class="road-h" style="top:46%;"></div>
+        <div class="road-h" style="top:76%;"></div>
+
+        <div class="crosswalk horiz" style="left:18%; top:35%;"></div>
+        <div class="street-sign" style="left:26%; top:35%;">🚸</div>
+        <div class="crosswalk vert" style="left:34%; top:20%;"></div>
+        <div class="street-sign" style="left:34%; top:28%;">🚸</div>
+        <div class="crosswalk horiz" style="left:82%; top:65%;"></div>
+        <div class="street-sign" style="left:74%; top:65%;">🚸</div>
+        <div class="crosswalk vert" style="left:66%; top:80%;"></div>
+        <div class="street-sign" style="left:66%; top:72%;">🚸</div>
+
+        <div class="street-sign" style="left:18%; top:20%;">🛑</div>
+        <div class="street-sign" style="left:50%; top:20%;">🛑</div>
+        <div class="street-sign" style="left:82%; top:20%;">🛑</div>
+        <div class="street-sign" style="left:18%; top:50%;">🛑</div>
+        <div class="street-sign" style="left:50%; top:50%;">🛑</div>
+        <div class="street-sign" style="left:82%; top:50%;">🛑</div>
+        <div class="street-sign" style="left:18%; top:80%;">🛑</div>
+        <div class="street-sign" style="left:50%; top:80%;">🛑</div>
+        <div class="street-sign" style="left:82%; top:80%;">🛑</div>
+
+        <div class="bridge" style="left:18%; top:72%;"></div>
+        <div class="bridge" style="left:50%; top:72%;"></div>
+        <div class="bridge" style="left:82%; top:72%;"></div>
+
+        <span class="season-tree" style="left:3%; top:4%;">🌳</span>
+        <span class="season-tree" style="left:97%; top:4%;">🌳</span>
+        <span class="season-tree" style="left:3%; top:96%;">🌳</span>
+        <span class="season-tree" style="left:97%; top:96%;">🌳</span>
         <div id="mapPinsLayer"></div>
         <div class="car-dot" id="mapCarDot">🚙</div>
       </div>
@@ -419,7 +435,7 @@ function resetAppStates(){
   driveToken++;
   document.getElementById("navBanner").style.display = "none";
   document.getElementById("trafficBadge").style.display = "none";
-  carPos = { x: 24, y: 72, axis: "x" };
+  carPos = { x: 18, y: 80, axis: "x" };
   const mapCarDot = document.getElementById("mapCarDot");
   mapCarDot.style.left = carPos.x + "%";
   mapCarDot.style.top = carPos.y + "%";
@@ -437,24 +453,39 @@ backBtn.addEventListener("click", () => showCarScreen("home"));
 
 // ---------- maps ----------
 const MAP_PLACES = [
-  { id:"home",       emo:"🏠", name:"Home",                  left:"85%", top:"15%", minutes:12 },
-  { id:"icecream",   emo:"🍦", name:"Frosty's Ice Cream",     left:"45%", top:"15%", minutes:6 },
-  { id:"pizza",      emo:"🍕", name:"Pete's Pizza",           left:"10%", top:"15%", minutes:5 },
-  { id:"jake",       emo:"👦", name:"Jake's House",           left:"10%", top:"27%", minutes:4, greet:{ who:"Jake", lines:["Hi!","Hello!"] } },
-  { id:"grocery",    emo:"🛒", name:"Fresh Mart",             left:"85%", top:"44%", minutes:7 },
-  { id:"grandma",    emo:"👵", name:"Grandma's House",        left:"85%", top:"55%", minutes:9, greet:{ who:"Grandma", lines:["Hi!","Hello!"] } },
-  { id:"grandpa",    emo:"👴", name:"Grandpa's House",        left:"85%", top:"66%", minutes:9, greet:{ who:"Grandpa", lines:["Hi!","Hello!"] } },
-  { id:"pool",       emo:"🏊", name:"Splash Pool",            left:"85%", top:"86%", minutes:9 },
-  { id:"ava",        emo:"👧", name:"Ava's House",            left:"45%", top:"78%", minutes:4, greet:{ who:"Ava", lines:["Hi!","Hello!"] } },
-  { id:"pond1",      emo:"🪷", name:"Willow Pond",            left:"45%", top:"86%", minutes:8, water:"pond" },
-  { id:"pond2",      emo:"🦆", name:"Duck Pond",              left:"10%", top:"86%", minutes:8, water:"pond", greet:{ who:"🦆", lines:["Quack quack!"] } },
-  { id:"river",      emo:"🌊", name:"Rushing River",          left:"50%", top:"44%", minutes:10, water:"river" },
+  // top row
+  { id:"pizza",      emo:"🍕", name:"Pete's Pizza",           left:"6%",  top:"5%",  minutes:5 },
+  { id:"jake",       emo:"👦", name:"Jake's House",           left:"6%",  top:"13%", minutes:4, greet:{ who:"Jake", lines:["Hi!","Hello!"] } },
+  { id:"school",     emo:"🏫", name:"Sunnyvale School",       left:"34%", top:"7%",  minutes:6 },
+  { id:"icecream",   emo:"🍦", name:"Frosty's Ice Cream",     left:"66%", top:"7%",  minutes:6 },
+  { id:"home",       emo:"🏠", name:"Home",                   left:"93%", top:"7%",  minutes:12 },
+
+  // second row
+  { id:"library",    emo:"📚", name:"Story Nook Library",     left:"6%",  top:"35%", minutes:6 },
+  { id:"movies",     emo:"🎬", name:"Starlight Cinema",       left:"34%", top:"32%", minutes:8 },
+  { id:"donuts",     emo:"🍩", name:"Sprinkle Donuts",        left:"66%", top:"32%", minutes:5 },
+  { id:"grocery",    emo:"🛒", name:"Fresh Mart",              left:"93%", top:"30%", minutes:7 },
+  { id:"grandma",    emo:"👵", name:"Grandma's House",         left:"93%", top:"40%", minutes:9, greet:{ who:"Grandma", lines:["Hi!","Hello!"] } },
+
+  // third row
+  { id:"firestation",emo:"🚒", name:"Fire Station 5",         left:"6%",  top:"60%", minutes:7 },
+  { id:"police",     emo:"👮", name:"Police Station",         left:"34%", top:"60%", minutes:7 },
+  { id:"toystore",   emo:"🧸", name:"Wonder Toys",             left:"66%", top:"60%", minutes:6 },
+  { id:"grandpa",    emo:"👴", name:"Grandpa's House",         left:"93%", top:"60%", minutes:9, greet:{ who:"Grandpa", lines:["Hi!","Hello!"] } },
+  { id:"river",      emo:"🌊", name:"Rushing River",           left:"50%", top:"72%", minutes:10, water:"river" },
+
+  // bottom row
+  { id:"pond2",      emo:"🦆", name:"Duck Pond",               left:"6%",  top:"92%", minutes:8, water:"pond", greet:{ who:"🦆", lines:["Quack quack!"] } },
+  { id:"ava",        emo:"👧", name:"Ava's House",             left:"30%", top:"86%", minutes:4, greet:{ who:"Ava", lines:["Hi!","Hello!"] } },
+  { id:"pond1",      emo:"🪷", name:"Willow Pond",              left:"30%", top:"95%", minutes:8, water:"pond" },
+  { id:"playground", emo:"🛝", name:"Rainbow Playground",      left:"66%", top:"92%", minutes:6 },
+  { id:"pool",       emo:"🏊", name:"Splash Pool",              left:"93%", top:"92%", minutes:9 },
 ];
 
 // street centerlines the car is allowed to drive along
-const STREET_X = [24, 70];
-const STREET_Y = [36, 72];
-const DRIVE_LEG_MS = 650;
+const STREET_X = [18, 50, 82];
+const STREET_Y = [20, 50, 80];
+const DRIVE_LEG_MS = 750;
 const TRAFFIC_LEVELS = [
   { cls:"low",    label:"light traffic" },
   { cls:"medium", label:"moderate traffic" },
@@ -497,7 +528,7 @@ function buildRoute(start, dest){
   return [{ x: start.x, y: dest.y }, { x: dest.x, y: dest.y }]; // start.axis === "x", dest.axis === "y"
 }
 
-let carPos = { x: 24, y: 72, axis: "x" };
+let carPos = { x: 18, y: 80, axis: "x" };
 
 function goToDestination(place){
   tone(880, 0, 0.1, "sine", 0.15);
