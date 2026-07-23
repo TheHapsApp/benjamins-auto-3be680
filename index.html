@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Benjamin's Auto</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8F%8E%EF%B8%8F%3C/text%3E%3C/svg%3E">
+<style>
+  :root{
+    --p1:#ff7b39; --p2:#2dd4bf; --p3:#4fa8ff; --p4:#7bd389;
+  }
+  *{box-sizing:border-box; margin:0; padding:0; -webkit-user-select:none; user-select:none; -webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;}
+  body{
+    font-family:"Comic Sans MS","Trebuchet MS",system-ui,sans-serif;
+    min-height:100vh;
+    color:#38314f;
+    text-align:center;
+    background:linear-gradient(120deg,var(--p1),var(--p3),var(--p4),var(--p2));
+    background-size:400% 400%;
+    animation:flow 16s ease infinite;
+    padding:24px 14px 50px;
+    overflow-x:hidden;
+  }
+  @keyframes flow{0%{background-position:0% 50%;}50%{background-position:100% 50%;}100%{background-position:0% 50%;}}
+
+  h1{
+    font-size:clamp(1.9rem,8vw,2.8rem);
+    color:#fff;
+    text-shadow:3px 3px 0 rgba(0,0,0,0.15);
+    animation:pop 2.5s ease-in-out infinite;
+  }
+  @keyframes pop{0%,100%{transform:scale(1) rotate(-1deg);}50%{transform:scale(1.04) rotate(1deg);}}
+  .sub{font-size:clamp(0.95rem,3.5vw,1.15rem); color:#fff; margin:4px 0 22px; text-shadow:1px 1px 0 rgba(0,0,0,0.12);}
+
+  /* ---- car screen bezel ---- */
+  .dashboard{
+    max-width:600px; margin:0 auto; aspect-ratio:16/9;
+    background:#111827; border-radius:26px; border:10px solid #2a2a35;
+    box-shadow:0 10px 0 rgba(0,0,0,0.25), 0 0 0 3px rgba(255,255,255,0.15);
+    position:relative; overflow:hidden;
+  }
+  .statusbar{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:6px 12px; color:#e5e7eb; font-size:0.8rem; font-weight:bold;
+  }
+  .backbtn{background:none; border:none; color:#e5e7eb; font-size:1.3rem; cursor:pointer; visibility:hidden; padding:0 4px;}
+  .statusicons{font-size:0.85rem;}
+
+  .car-screen{display:none; position:relative; height:calc(100% - 30px);}
+  .car-screen.active{display:block;}
+
+  /* ---- home ---- */
+  .app-grid{display:flex; flex-wrap:wrap; gap:18px; justify-content:center; align-items:center; height:100%; padding:10px;}
+  .car-app{display:flex; flex-direction:column; align-items:center; gap:5px; background:none; border:none; cursor:pointer;}
+  .car-icon{
+    width:58px; height:58px; border-radius:15px; display:flex; align-items:center; justify-content:center;
+    font-size:1.7rem; box-shadow:0 4px 0 rgba(0,0,0,0.3); transition:transform .08s ease;
+  }
+  .car-app:active .car-icon{transform:translateY(3px); box-shadow:0 1px 0 rgba(0,0,0,0.3);}
+  .car-label{font-size:0.7rem; color:#e5e7eb; font-weight:bold;}
+  .car-icon.music{background:#d6336c;}
+  .car-icon.maps{background:#137333;}
+  .car-icon.phone{background:#2563eb;}
+  .car-icon.climate{background:#0891b2;}
+
+  /* ---- maps ---- */
+  .map-bg{position:absolute; inset:0; background:#dbe9d8; overflow:hidden;}
+  .road{position:absolute; left:8%; top:0; width:16%; height:100%; background:#4a4a55; transform:skewX(-10deg);}
+  .road::after{content:""; position:absolute; left:50%; top:0; width:2px; height:100%; background:repeating-linear-gradient(#fff 0 10px, transparent 10px 20px); transform:translateX(-50%);}
+  .car-dot{position:absolute; left:20%; top:75%; font-size:1.5rem; transition:left 2s ease, top 2s ease; z-index:2;}
+  .home-pin{position:absolute; left:78%; top:14%; font-size:1.7rem; z-index:1;}
+  .dest-pin{position:absolute; font-size:1.6rem; z-index:1; display:none;}
+  .map-topbar{position:absolute; top:8px; left:8px; right:8px; display:flex; gap:6px; z-index:3;}
+  .search-bar{flex:1; background:rgba(255,255,255,0.92); border-radius:999px; padding:7px 12px; font-size:0.8rem; color:#333; text-align:left; border:none; font-family:inherit; cursor:pointer;}
+  .home-shortcut{background:#fff; border:none; border-radius:999px; padding:7px 12px; font-weight:bold; font-size:0.8rem; color:#1a73e8; cursor:pointer; font-family:inherit;}
+  .home-shortcut:active{transform:translateY(1px);}
+  .nav-banner{
+    position:absolute; bottom:8px; left:8px; right:8px; background:rgba(0,0,0,0.7); color:#fff;
+    padding:8px; border-radius:10px; text-align:center; font-size:0.8rem; z-index:3; display:none;
+  }
+  .search-menu{
+    position:absolute; top:44px; left:8px; right:8px; background:rgba(17,24,39,0.95);
+    border-radius:14px; padding:10px; z-index:4; display:none;
+  }
+  .search-menu.open{display:block;}
+  .search-menu-header{display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; color:#e5e7eb; font-size:0.8rem; font-weight:bold;}
+  .search-menu-close{background:none; border:none; color:#e5e7eb; font-size:1rem; cursor:pointer;}
+  .category-grid{display:grid; grid-template-columns:repeat(2,1fr); gap:8px;}
+  .category-btn{
+    background:rgba(255,255,255,0.12); border:none; border-radius:10px; padding:10px; color:#e5e7eb;
+    font-size:0.8rem; font-weight:bold; cursor:pointer; font-family:inherit;
+    display:flex; flex-direction:column; align-items:center; gap:4px;
+  }
+  .category-btn:active{transform:translateY(2px);}
+
+  /* ---- music player ---- */
+  .player-card{display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; color:#e5e7eb; gap:8px; padding:10px;}
+  .album-art{
+    width:90px; height:90px; border-radius:16px; display:flex; align-items:center; justify-content:center;
+    font-size:2.2rem; box-shadow:0 6px 10px rgba(0,0,0,0.3);
+    background:linear-gradient(135deg,#d6336c,#8a1c48);
+  }
+  .album-art.spinning{animation:spin 3s linear infinite;}
+  @keyframes spin{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}
+  .song-title{font-weight:bold; font-size:1rem;}
+  .song-artist{font-size:0.8rem; opacity:0.8;}
+  .progress-bar{width:75%; max-width:200px; height:6px; background:rgba(255,255,255,0.2); border-radius:3px; overflow:hidden;}
+  .progress-fill{height:100%; width:35%; background:#e5e7eb; border-radius:3px;}
+  .player-controls{display:flex; gap:16px; margin-top:4px;}
+  .player-controls button{background:none; border:none; font-size:1.5rem; color:#e5e7eb; cursor:pointer;}
+  .playlist-row{display:flex; gap:6px; margin-top:6px; flex-wrap:wrap; justify-content:center; padding:0 8px;}
+  .playlist-pick{background:rgba(255,255,255,0.12); border:none; border-radius:8px; padding:5px 8px; font-size:0.75rem; color:#e5e7eb; cursor:pointer; font-family:inherit;}
+  .playlist-pick.selected{background:#d6336c;}
+  .playlist-pick:active{transform:translateY(2px);}
+
+  /* ---- phone ---- */
+  .phone-idle,.phone-calling,.phone-active{
+    display:none; flex-direction:column; align-items:center; justify-content:center; height:100%; gap:10px; color:#e5e7eb; padding:10px;
+  }
+  .phone-idle{display:flex;}
+  .contact-grid{display:grid; grid-template-columns:repeat(2,1fr); gap:10px; width:100%; max-width:280px;}
+  .contact-btn{
+    background:rgba(255,255,255,0.12); border:none; border-radius:12px; padding:10px 6px; color:#e5e7eb;
+    font-size:0.8rem; font-weight:bold; cursor:pointer; font-family:inherit;
+    display:flex; flex-direction:column; align-items:center; gap:4px;
+  }
+  .contact-btn:active{transform:translateY(2px);}
+  .contact-emo{font-size:1.6rem;}
+  .caller-avatar{font-size:2.4rem;}
+  .caller-avatar.ringing{animation:ringPulse 0.9s ease-in-out infinite;}
+  @keyframes ringPulse{0%,100%{transform:scale(1);}50%{transform:scale(1.15);}}
+  .caller-name{font-weight:bold; font-size:1.05rem;}
+  .calling-label{font-size:0.8rem; opacity:0.8;}
+  .call-actions{display:flex; gap:24px;}
+  .call-btn{width:50px; height:50px; border-radius:50%; border:none; font-size:1.3rem; cursor:pointer; color:#fff;}
+  .call-btn.answer{background:#22c55e;}
+  .call-btn.decline{background:#ef4444;}
+  .call-btn.leave{background:#ef4444; width:auto; border-radius:999px; padding:0 18px; font-size:0.9rem; font-weight:bold; height:40px;}
+  .call-timer{font-size:1.2rem; font-weight:bold;}
+  .call-msg{font-size:0.85rem; background:rgba(255,255,255,0.12); border-radius:10px; padding:6px 12px; max-width:220px;}
+
+  /* ---- climate ---- */
+  .climate-card{display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; gap:10px; color:#e5e7eb; padding:8px;}
+  .temp-block{display:flex; align-items:center; gap:14px;}
+  .climate-btn{
+    width:38px; height:38px; border-radius:50%; border:none; background:rgba(255,255,255,0.15);
+    color:#e5e7eb; font-size:1.1rem; cursor:pointer;
+  }
+  .climate-btn:active{transform:translateY(2px);}
+  .climate-btn.small{width:30px; height:30px; font-size:0.9rem;}
+  .temp-display{font-size:1.8rem; font-weight:bold;}
+  .fan-block{display:flex; flex-direction:column; align-items:center; gap:4px;}
+  .fan-icon{font-size:1.7rem; display:inline-block; animation:spin 2s linear infinite; animation-play-state:paused;}
+  .fan-dots{display:flex; gap:4px;}
+  .fan-dot{width:8px; height:8px; border-radius:50%; background:rgba(255,255,255,0.2);}
+  .fan-dot.on{background:#4fa8ff;}
+  .fan-buttons{display:flex; align-items:center; gap:8px; font-size:0.75rem;}
+  .seat-block{display:flex; gap:10px;}
+  .seat-btn{
+    background:rgba(255,255,255,0.12); border:none; border-radius:10px; padding:8px 10px; color:#e5e7eb;
+    font-size:0.72rem; font-weight:bold; cursor:pointer; font-family:inherit; line-height:1.3;
+  }
+  .seat-btn.lvl-1{background:rgba(239,68,68,0.3);}
+  .seat-btn.lvl-2{background:rgba(239,68,68,0.55);}
+  .seat-btn.lvl-3{background:rgba(239,68,68,0.85);}
+  .seat-btn:active{transform:translateY(2px);}
+  .defrost-btn{
+    background:rgba(255,255,255,0.12); border:none; border-radius:999px; padding:8px 16px; color:#e5e7eb;
+    font-size:0.8rem; font-weight:bold; cursor:pointer; font-family:inherit;
+  }
+  .defrost-btn.on{background:#0891b2;}
+  .defrost-btn:active{transform:translateY(2px);}
+
+  footer{margin-top:22px; font-size:0.8rem; color:#fff; opacity:0.85; text-shadow:1px 1px 0 rgba(0,0,0,0.1);}
+</style>
+</head>
+<body>
+  <h1>🏎️ Benjamin's Auto</h1>
+  <p class="sub">Tap an app to explore your dashboard!</p>
+
+  <div class="dashboard">
+    <div class="statusbar">
+      <button class="backbtn" id="backBtn">←</button>
+      <div id="clock">10:32</div>
+      <div class="statusicons">📶 🔋</div>
+    </div>
+
+    <!-- ==== HOME ==== -->
+    <div class="car-screen active" id="screen-home">
+      <div class="app-grid">
+        <button class="car-app" data-screen="music">
+          <div class="car-icon music">🎵</div>
+          <div class="car-label">Music</div>
+        </button>
+        <button class="car-app" data-screen="maps">
+          <div class="car-icon maps">🗺️</div>
+          <div class="car-label">Maps</div>
+        </button>
+        <button class="car-app" data-screen="phone">
+          <div class="car-icon phone">📞</div>
+          <div class="car-label">Phone</div>
+        </button>
+        <button class="car-app" data-screen="climate">
+          <div class="car-icon climate">🌡️</div>
+          <div class="car-label">Climate</div>
+        </button>
+      </div>
+    </div>
+
+    <!-- ==== MUSIC ==== -->
+    <div class="car-screen" id="screen-music">
+      <div class="player-card">
+        <div class="album-art" id="albumArt">🎸</div>
+        <div class="song-title" id="songTitle">Turbo Beat</div>
+        <div class="song-artist" id="songArtist">The Motorheads</div>
+        <div class="progress-bar"><div class="progress-fill"></div></div>
+        <div class="player-controls">
+          <button id="musicPrev">⏮</button>
+          <button id="musicPlay">▶️</button>
+          <button id="musicNext">⏭</button>
+        </div>
+        <div class="playlist-row" id="playlistRow"></div>
+      </div>
+    </div>
+
+    <!-- ==== MAPS ==== -->
+    <div class="car-screen" id="screen-maps">
+      <div class="map-bg">
+        <div class="road"></div>
+        <div class="home-pin">🏠</div>
+        <div class="dest-pin" id="destPin"></div>
+        <div class="car-dot" id="mapCarDot">🚙</div>
+      </div>
+      <div class="map-topbar">
+        <button class="search-bar" id="searchBarBtn">🔍 Search here</button>
+        <button class="home-shortcut" id="homeShortcutBtn">🏠 Home</button>
+      </div>
+      <div class="search-menu" id="searchMenu">
+        <div class="search-menu-header">
+          <span>Search nearby</span>
+          <button class="search-menu-close" id="searchMenuClose">✖</button>
+        </div>
+        <div class="category-grid">
+          <button class="category-btn" data-cat="school">🏫<span>School</span></button>
+          <button class="category-btn" data-cat="pizza">🍕<span>Pizza</span></button>
+          <button class="category-btn" data-cat="park">🏞️<span>Park</span></button>
+          <button class="category-btn" data-cat="icecream">🍦<span>Ice Cream</span></button>
+        </div>
+      </div>
+      <div class="nav-banner" id="navBanner"></div>
+    </div>
+
+    <!-- ==== PHONE ==== -->
+    <div class="car-screen" id="screen-phone">
+      <div class="phone-idle" id="phoneIdle">
+        <div class="contact-grid" id="contactGrid"></div>
+      </div>
+      <div class="phone-calling" id="phoneCalling">
+        <div class="caller-avatar ringing" id="callingAvatar">👩</div>
+        <div class="caller-name" id="callingName">Mom</div>
+        <div class="calling-label">Calling...</div>
+        <div class="call-actions">
+          <button class="call-btn decline" id="cancelCallBtn">✖</button>
+        </div>
+      </div>
+      <div class="phone-active" id="phoneActive">
+        <div class="caller-avatar" id="activeAvatar">👩</div>
+        <div class="caller-name" id="activeName">Mom</div>
+        <div class="call-timer" id="callTimer">00:00</div>
+        <div class="call-msg" id="callMsg"></div>
+        <button class="call-btn leave" id="hangupBtn">✖ Hang Up</button>
+      </div>
+    </div>
+
+    <!-- ==== CLIMATE ==== -->
+    <div class="car-screen" id="screen-climate">
+      <div class="climate-card">
+        <div class="temp-block">
+          <button class="climate-btn" id="tempDown">➖</button>
+          <div class="temp-display"><span id="tempValue">72</span>°</div>
+          <button class="climate-btn" id="tempUp">➕</button>
+        </div>
+        <div class="fan-block">
+          <div class="fan-icon" id="fanIcon">🌀</div>
+          <div class="fan-dots" id="fanDots"></div>
+          <div class="fan-buttons">
+            <button class="climate-btn small" id="fanDown">➖</button>
+            <span>Fan</span>
+            <button class="climate-btn small" id="fanUp">➕</button>
+          </div>
+        </div>
+        <div class="seat-block">
+          <button class="seat-btn" id="seatDriver">🚗💺<br>Driver: Off</button>
+          <button class="seat-btn" id="seatPax">🧑💺<br>Passenger: Off</button>
+        </div>
+        <button class="defrost-btn" id="defrostBtn">🌬️ Defrost</button>
+      </div>
+    </div>
+  </div>
+
+  <footer>Made for Ben 🏎️</footer>
+
+<script>
+// ---------- clock ----------
+function updateClock(){
+  const now = new Date();
+  document.getElementById("clock").textContent = now.toLocaleTimeString([], { hour:"2-digit", minute:"2-digit" });
+}
+updateClock();
+setInterval(updateClock, 1000);
+
+// ---------- audio ----------
+let audioCtx;
+function ctx(){
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return audioCtx;
+}
+function tone(freq, start, dur, type, gainMax){
+  const c = ctx();
+  const osc = c.createOscillator();
+  const gain = c.createGain();
+  osc.type = type || "sine";
+  osc.frequency.setValueAtTime(freq, c.currentTime + start);
+  gain.gain.setValueAtTime(0, c.currentTime + start);
+  gain.gain.linearRampToValueAtTime(gainMax || 0.15, c.currentTime + start + 0.02);
+  gain.gain.exponentialRampToValueAtTime(0.001, c.currentTime + start + dur);
+  osc.connect(gain).connect(c.destination);
+  osc.start(c.currentTime + start);
+  osc.stop(c.currentTime + start + dur + 0.05);
+}
+
+// ---------- navigation ----------
+const backBtn = document.getElementById("backBtn");
+let musicInterval = null, callingTimeout = null, callTimerInterval = null;
+let musicPlaying = false, callSeconds = 0;
+
+function resetAppStates(){
+  clearInterval(musicInterval); musicInterval = null;
+  clearTimeout(callingTimeout); callingTimeout = null;
+  clearInterval(callTimerInterval); callTimerInterval = null;
+
+  musicPlaying = false;
+  document.getElementById("musicPlay").textContent = "▶️";
+  document.getElementById("albumArt").classList.remove("spinning");
+
+  callSeconds = 0;
+  document.getElementById("callTimer").textContent = "00:00";
+  document.getElementById("phoneIdle").style.display = "flex";
+  document.getElementById("phoneCalling").style.display = "none";
+  document.getElementById("phoneActive").style.display = "none";
+
+  document.getElementById("navBanner").style.display = "none";
+  const mapCarDot = document.getElementById("mapCarDot");
+  mapCarDot.style.left = "20%";
+  mapCarDot.style.top = "75%";
+  document.getElementById("destPin").style.display = "none";
+  document.getElementById("searchMenu").classList.remove("open");
+}
+
+function showCarScreen(id){
+  resetAppStates();
+  document.querySelectorAll(".car-screen").forEach(s => s.classList.remove("active"));
+  document.getElementById("screen-" + id).classList.add("active");
+  backBtn.style.visibility = id === "home" ? "hidden" : "visible";
+}
+document.querySelectorAll(".car-app").forEach(b => b.addEventListener("click", () => showCarScreen(b.dataset.screen)));
+backBtn.addEventListener("click", () => showCarScreen("home"));
+
+// ---------- maps ----------
+const CATEGORIES = {
+  school:   { emoji:"🏫", label:"School",     left:"55%", top:"60%", minutes:7 },
+  pizza:    { emoji:"🍕", label:"Pizza Place", left:"35%", top:"25%", minutes:5 },
+  park:     { emoji:"🏞️", label:"Park",       left:"60%", top:"20%", minutes:6 },
+  icecream: { emoji:"🍦", label:"Ice Cream",  left:"45%", top:"45%", minutes:4 },
+};
+
+function goToDestination(dot, banner, left, top, label, minutes){
+  tone(880, 0, 0.1, "sine", 0.15);
+  tone(660, 0.08, 0.15, "sine", 0.12);
+  dot.style.left = left;
+  dot.style.top = top;
+  banner.textContent = `Navigating to ${label}... ${minutes} min`;
+  banner.style.display = "block";
+  setTimeout(() => { banner.textContent = `You're at ${label}! 🎉`; }, 2000);
+}
+document.getElementById("homeShortcutBtn").addEventListener("click", () => {
+  document.getElementById("searchMenu").classList.remove("open");
+  document.getElementById("destPin").style.display = "none";
+  goToDestination(document.getElementById("mapCarDot"), document.getElementById("navBanner"), "78%", "14%", "Home", 12);
+});
+document.getElementById("searchBarBtn").addEventListener("click", () => {
+  document.getElementById("searchMenu").classList.toggle("open");
+});
+document.getElementById("searchMenuClose").addEventListener("click", () => {
+  document.getElementById("searchMenu").classList.remove("open");
+});
+document.querySelectorAll(".category-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const cat = CATEGORIES[btn.dataset.cat];
+    const destPin = document.getElementById("destPin");
+    destPin.textContent = cat.emoji;
+    destPin.style.left = cat.left;
+    destPin.style.top = cat.top;
+    destPin.style.display = "block";
+    document.getElementById("searchMenu").classList.remove("open");
+    goToDestination(document.getElementById("mapCarDot"), document.getElementById("navBanner"), cat.left, cat.top, cat.label, cat.minutes);
+  });
+});
+
+// ---------- music ----------
+const PLAYLIST = [
+  { title:"Turbo Beat",      artist:"The Motorheads",   emo:"🎸", notes:[196.00,246.94,293.66,246.94] },
+  { title:"Desert Drive",    artist:"Fast Lane Five",   emo:"🏜️", notes:[220.00,261.63,329.63,261.63] },
+  { title:"Pit Stop Party",  artist:"Gear Shift Crew",  emo:"🎉", notes:[392.00,440.00,523.25,440.00] },
+  { title:"Night Cruise",    artist:"Midnight Riders",  emo:"🌙", notes:[293.66,349.23,392.00,349.23] },
+];
+let songIndex = 0;
+
+function renderPlaylistRow(){
+  const row = document.getElementById("playlistRow");
+  row.innerHTML = "";
+  PLAYLIST.forEach((song, i) => {
+    const btn = document.createElement("button");
+    btn.className = "playlist-pick" + (i === songIndex ? " selected" : "");
+    btn.textContent = song.emo + " " + song.title;
+    btn.addEventListener("click", () => loadSong(i));
+    row.appendChild(btn);
+  });
+}
+
+function loadSong(i){
+  songIndex = i;
+  const song = PLAYLIST[songIndex];
+  document.getElementById("albumArt").textContent = song.emo;
+  document.getElementById("songTitle").textContent = song.title;
+  document.getElementById("songArtist").textContent = song.artist;
+  renderPlaylistRow();
+  if (musicPlaying) startMusicLoop();
+}
+
+function startMusicLoop(){
+  clearInterval(musicInterval);
+  const notes = PLAYLIST[songIndex].notes;
+  let i = 0;
+  musicInterval = setInterval(() => {
+    tone(notes[i % notes.length], 0, 0.35, "sine", 0.1);
+    i++;
+  }, 450);
+}
+
+document.getElementById("musicPlay").addEventListener("click", () => {
+  musicPlaying = !musicPlaying;
+  const btn = document.getElementById("musicPlay");
+  const art = document.getElementById("albumArt");
+  if (musicPlaying){
+    btn.textContent = "⏸";
+    art.classList.add("spinning");
+    startMusicLoop();
+  } else {
+    btn.textContent = "▶️";
+    art.classList.remove("spinning");
+    clearInterval(musicInterval);
+  }
+});
+document.getElementById("musicPrev").addEventListener("click", () => {
+  tone(330, 0, 0.1, "triangle", 0.1);
+  loadSong((songIndex - 1 + PLAYLIST.length) % PLAYLIST.length);
+});
+document.getElementById("musicNext").addEventListener("click", () => {
+  tone(550, 0, 0.1, "triangle", 0.1);
+  loadSong((songIndex + 1) % PLAYLIST.length);
+});
+renderPlaylistRow();
+
+// ---------- phone ----------
+const CONTACTS = [
+  { name:"Mom",         emo:"👩", msg:"Hi honey, love you! ❤️" },
+  { name:"Dad",         emo:"👨", msg:"Hey buddy, great job! 👍" },
+  { name:"Grandma",     emo:"👵", msg:"I baked cookies for you! 🍪" },
+  { name:"Best Friend", emo:"🧒", msg:"Wanna play after school? 🎮" },
+];
+function formatTime(s){
+  const m = Math.floor(s / 60);
+  const sec = s % 60;
+  return String(m).padStart(2, "0") + ":" + String(sec).padStart(2, "0");
+}
+function renderContacts(){
+  const grid = document.getElementById("contactGrid");
+  grid.innerHTML = "";
+  CONTACTS.forEach(c => {
+    const btn = document.createElement("button");
+    btn.className = "contact-btn";
+    btn.innerHTML = `<span class="contact-emo">${c.emo}</span><span>${c.name}</span>`;
+    btn.addEventListener("click", () => startCall(c));
+    grid.appendChild(btn);
+  });
+}
+function startCall(contact){
+  document.getElementById("phoneIdle").style.display = "none";
+  document.getElementById("phoneCalling").style.display = "flex";
+  document.getElementById("callingAvatar").textContent = contact.emo;
+  document.getElementById("callingName").textContent = contact.name;
+  const ring = setInterval(() => {
+    tone(600, 0, 0.15, "sine", 0.15);
+    tone(500, 0.15, 0.15, "sine", 0.12);
+  }, 900);
+  callingTimeout = setTimeout(() => {
+    clearInterval(ring);
+    connectCall(contact);
+  }, 1800);
+  document.getElementById("cancelCallBtn").onclick = () => {
+    clearInterval(ring);
+    clearTimeout(callingTimeout);
+    document.getElementById("phoneCalling").style.display = "none";
+    document.getElementById("phoneIdle").style.display = "flex";
+  };
+}
+function connectCall(contact){
+  tone(880, 0, 0.15, "sine", 0.15);
+  document.getElementById("phoneCalling").style.display = "none";
+  document.getElementById("phoneActive").style.display = "flex";
+  document.getElementById("activeAvatar").textContent = contact.emo;
+  document.getElementById("activeName").textContent = contact.name;
+  document.getElementById("callMsg").textContent = contact.msg;
+  callSeconds = 0;
+  callTimerInterval = setInterval(() => {
+    callSeconds++;
+    document.getElementById("callTimer").textContent = formatTime(callSeconds);
+  }, 1000);
+}
+document.getElementById("hangupBtn").addEventListener("click", () => {
+  clearInterval(callTimerInterval); callTimerInterval = null;
+  document.getElementById("phoneActive").style.display = "none";
+  document.getElementById("phoneIdle").style.display = "flex";
+  document.getElementById("callTimer").textContent = "00:00";
+});
+renderContacts();
+
+// ---------- climate ----------
+let temp = 72, fan = 2, seatDriverLvl = 0, seatPaxLvl = 0, defrostOn = false;
+const SEAT_LABELS = ["Off", "Low", "Med", "High"];
+
+function renderClimate(){
+  document.getElementById("tempValue").textContent = temp;
+
+  const dots = document.getElementById("fanDots");
+  dots.innerHTML = "";
+  for (let i = 1; i <= 5; i++){
+    const d = document.createElement("div");
+    d.className = "fan-dot" + (i <= fan ? " on" : "");
+    dots.appendChild(d);
+  }
+  const fanIcon = document.getElementById("fanIcon");
+  if (fan > 0){
+    fanIcon.style.animationPlayState = "running";
+    fanIcon.style.animationDuration = (1.6 - fan * 0.22) + "s";
+  } else {
+    fanIcon.style.animationPlayState = "paused";
+  }
+
+  const driverBtn = document.getElementById("seatDriver");
+  driverBtn.innerHTML = "🚗💺<br>Driver: " + SEAT_LABELS[seatDriverLvl];
+  driverBtn.className = "seat-btn" + (seatDriverLvl > 0 ? " lvl-" + seatDriverLvl : "");
+
+  const paxBtn = document.getElementById("seatPax");
+  paxBtn.innerHTML = "🧑💺<br>Passenger: " + SEAT_LABELS[seatPaxLvl];
+  paxBtn.className = "seat-btn" + (seatPaxLvl > 0 ? " lvl-" + seatPaxLvl : "");
+
+  document.getElementById("defrostBtn").classList.toggle("on", defrostOn);
+}
+
+document.getElementById("tempDown").addEventListener("click", () => {
+  temp = Math.max(60, temp - 1);
+  tone(300, 0, 0.08, "triangle", 0.1);
+  renderClimate();
+});
+document.getElementById("tempUp").addEventListener("click", () => {
+  temp = Math.min(85, temp + 1);
+  tone(500, 0, 0.08, "triangle", 0.1);
+  renderClimate();
+});
+document.getElementById("fanDown").addEventListener("click", () => {
+  fan = Math.max(0, fan - 1);
+  tone(260, 0, 0.08, "triangle", 0.1);
+  renderClimate();
+});
+document.getElementById("fanUp").addEventListener("click", () => {
+  fan = Math.min(5, fan + 1);
+  tone(460, 0, 0.08, "triangle", 0.1);
+  renderClimate();
+});
+document.getElementById("seatDriver").addEventListener("click", () => {
+  seatDriverLvl = (seatDriverLvl + 1) % 4;
+  tone(400, 0, 0.1, "sine", 0.1);
+  renderClimate();
+});
+document.getElementById("seatPax").addEventListener("click", () => {
+  seatPaxLvl = (seatPaxLvl + 1) % 4;
+  tone(400, 0, 0.1, "sine", 0.1);
+  renderClimate();
+});
+document.getElementById("defrostBtn").addEventListener("click", () => {
+  defrostOn = !defrostOn;
+  tone(defrostOn ? 700 : 350, 0, 0.12, "sine", 0.12);
+  renderClimate();
+});
+renderClimate();
+</script>
+</body>
+</html>
