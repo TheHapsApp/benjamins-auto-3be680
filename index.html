@@ -126,7 +126,7 @@
   .playlist-pick:active{transform:translateY(2px);}
 
   /* ---- phone ---- */
-  .phone-idle,.phone-calling,.phone-active{
+  .phone-idle,.phone-calling,.phone-active,.phone-incoming{
     display:none; flex-direction:column; align-items:center; justify-content:center; height:100%; gap:10px; color:#e5e7eb; padding:10px;
   }
   .phone-idle{display:flex;}
@@ -288,6 +288,15 @@
           <button class="call-btn decline" id="cancelCallBtn">✖</button>
         </div>
       </div>
+      <div class="phone-incoming" id="phoneIncoming">
+        <div class="caller-avatar ringing" id="incomingAvatar">👩</div>
+        <div class="caller-name" id="incomingName">Mom</div>
+        <div class="calling-label">Incoming call...</div>
+        <div class="call-actions">
+          <button class="call-btn decline" id="declineIncomingBtn">✖</button>
+          <button class="call-btn answer" id="answerIncomingBtn">📞</button>
+        </div>
+      </div>
       <div class="phone-active" id="phoneActive">
         <div class="caller-avatar" id="activeAvatar">👩</div>
         <div class="caller-name" id="activeName">Mom</div>
@@ -359,8 +368,15 @@ function tone(freq, start, dur, type, gainMax){
 const backBtn = document.getElementById("backBtn");
 let musicInterval = null, callingTimeout = null, callTimerInterval = null;
 let scriptTimeout1 = null, scriptTimeout2 = null, scriptTimeout3 = null;
+let incomingCallTimeout = null, incomingRingInterval = null;
 let musicPlaying = false, callSeconds = 0;
 let driveToken = 0;
+
+function cancelIncomingCall(){
+  clearTimeout(incomingCallTimeout); incomingCallTimeout = null;
+  clearInterval(incomingRingInterval); incomingRingInterval = null;
+  document.getElementById("phoneIncoming").style.display = "none";
+}
 
 function resetAppStates(){
   clearInterval(musicInterval); musicInterval = null;
@@ -369,6 +385,7 @@ function resetAppStates(){
   clearTimeout(scriptTimeout1); scriptTimeout1 = null;
   clearTimeout(scriptTimeout2); scriptTimeout2 = null;
   clearTimeout(scriptTimeout3); scriptTimeout3 = null;
+  cancelIncomingCall();
 
   musicPlaying = false;
   document.getElementById("musicPlay").textContent = "▶️";
@@ -395,6 +412,7 @@ function showCarScreen(id){
   document.querySelectorAll(".car-screen").forEach(s => s.classList.remove("active"));
   document.getElementById("screen-" + id).classList.add("active");
   backBtn.style.visibility = id === "home" ? "hidden" : "visible";
+  if (id === "phone") scheduleIncomingCall();
 }
 document.querySelectorAll(".car-app").forEach(b => b.addEventListener("click", () => showCarScreen(b.dataset.screen)));
 backBtn.addEventListener("click", () => showCarScreen("home"));
@@ -404,14 +422,14 @@ const MAP_PLACES = [
   { id:"home",       emo:"🏠", name:"Home",                  left:"85%", top:"15%", minutes:12 },
   { id:"icecream",   emo:"🍦", name:"Frosty's Ice Cream",     left:"45%", top:"15%", minutes:6 },
   { id:"pizza",      emo:"🍕", name:"Pete's Pizza",           left:"10%", top:"15%", minutes:5 },
-  { id:"jake",       emo:"👦", name:"Jake's House",           left:"10%", top:"27%", minutes:4, person:"Jake" },
+  { id:"jake",       emo:"👦", name:"Jake's House",           left:"10%", top:"27%", minutes:4, greet:{ who:"Jake", lines:["Hi!","Hello!"] } },
   { id:"grocery",    emo:"🛒", name:"Fresh Mart",             left:"85%", top:"44%", minutes:7 },
-  { id:"grandma",    emo:"👵", name:"Grandma's House",        left:"85%", top:"55%", minutes:9, person:"Grandma" },
-  { id:"grandpa",    emo:"👴", name:"Grandpa's House",        left:"85%", top:"66%", minutes:9, person:"Grandpa" },
+  { id:"grandma",    emo:"👵", name:"Grandma's House",        left:"85%", top:"55%", minutes:9, greet:{ who:"Grandma", lines:["Hi!","Hello!"] } },
+  { id:"grandpa",    emo:"👴", name:"Grandpa's House",        left:"85%", top:"66%", minutes:9, greet:{ who:"Grandpa", lines:["Hi!","Hello!"] } },
   { id:"pool",       emo:"🏊", name:"Splash Pool",            left:"85%", top:"86%", minutes:9 },
-  { id:"ava",        emo:"👧", name:"Ava's House",            left:"45%", top:"78%", minutes:4, person:"Ava" },
+  { id:"ava",        emo:"👧", name:"Ava's House",            left:"45%", top:"78%", minutes:4, greet:{ who:"Ava", lines:["Hi!","Hello!"] } },
   { id:"pond1",      emo:"🪷", name:"Willow Pond",            left:"45%", top:"86%", minutes:8, water:"pond" },
-  { id:"pond2",      emo:"🦆", name:"Duck Pond",              left:"10%", top:"86%", minutes:8, water:"pond" },
+  { id:"pond2",      emo:"🦆", name:"Duck Pond",              left:"10%", top:"86%", minutes:8, water:"pond", greet:{ who:"🦆", lines:["Quack quack!"] } },
   { id:"river",      emo:"🌊", name:"Rushing River",          left:"50%", top:"44%", minutes:10, water:"river" },
 ];
 
@@ -467,9 +485,9 @@ function goToDestination(place){
     if (myToken !== driveToken) return;
     if (i >= route.length){
       let msg = `You're at ${place.name}! 🎉`;
-      if (place.person){
-        const greeting = Math.random() < 0.5 ? "Hi!" : "Hello!";
-        msg += ` ${place.person}: ${greeting}`;
+      if (place.greet){
+        const line = place.greet.lines[Math.floor(Math.random() * place.greet.lines.length)];
+        msg += ` ${place.greet.who}: ${line}`;
       }
       banner.textContent = msg;
       badge.style.display = "none";
@@ -680,9 +698,9 @@ const CONTACTS = [
       spring: { question:"Want to ride bikes and see the flowers?",
         options:[{ label:"Let's go! 🌸", reply:"Let's go!", response:"Yay, see you soon!" },
                  { label:"Not right now", reply:"Not right now", response:"Okay, another time!" }] },
-      summer: { question:"Want to ride bikes today?",
-        options:[{ label:"Let's go! 🚲", reply:"Let's go!", response:"Okay!" },
-                 { label:"Not right now", reply:"Not right now", response:"Alright, later then!" }] },
+      summer: { question:"Wanna go swimming?",
+        options:[{ label:"Sure! 🏊", reply:"Sure, probably after school", response:"Yay, can't wait!" },
+                 { label:"Maybe tomorrow", reply:"Maybe tomorrow", response:"Okay, no worries!" }] },
       fall:   { question:"Want to go on a hayride?",
         options:[{ label:"Let's go! 🌾", reply:"Let's go!", response:"Yay, so fun!" },
                  { label:"Not right now", reply:"Not right now", response:"Okay, another time!" }] },
@@ -708,6 +726,7 @@ function renderContacts(){
   });
 }
 function startCall(contact){
+  cancelIncomingCall();
   document.getElementById("phoneIdle").style.display = "none";
   document.getElementById("phoneCalling").style.display = "flex";
   document.getElementById("callingAvatar").textContent = contact.emo;
@@ -725,6 +744,38 @@ function startCall(contact){
     clearTimeout(callingTimeout);
     document.getElementById("phoneCalling").style.display = "none";
     document.getElementById("phoneIdle").style.display = "flex";
+    scheduleIncomingCall();
+  };
+}
+
+function scheduleIncomingCall(){
+  clearTimeout(incomingCallTimeout);
+  incomingCallTimeout = setTimeout(triggerIncomingCall, 6000 + Math.random() * 8000);
+}
+function triggerIncomingCall(){
+  if (document.getElementById("phoneIdle").style.display !== "flex"){
+    scheduleIncomingCall();
+    return;
+  }
+  const contact = CONTACTS[Math.floor(Math.random() * CONTACTS.length)];
+  document.getElementById("phoneIdle").style.display = "none";
+  document.getElementById("phoneIncoming").style.display = "flex";
+  document.getElementById("incomingAvatar").textContent = contact.emo;
+  document.getElementById("incomingName").textContent = contact.name;
+  incomingRingInterval = setInterval(() => {
+    tone(600, 0, 0.15, "sine", 0.15);
+    tone(500, 0.15, 0.15, "sine", 0.12);
+  }, 900);
+  document.getElementById("answerIncomingBtn").onclick = () => {
+    clearInterval(incomingRingInterval); incomingRingInterval = null;
+    document.getElementById("phoneIncoming").style.display = "none";
+    connectCall(contact);
+  };
+  document.getElementById("declineIncomingBtn").onclick = () => {
+    clearInterval(incomingRingInterval); incomingRingInterval = null;
+    document.getElementById("phoneIncoming").style.display = "none";
+    document.getElementById("phoneIdle").style.display = "flex";
+    scheduleIncomingCall();
   };
 }
 function connectCall(contact){
@@ -777,6 +828,7 @@ function endCall(){
   document.getElementById("phoneIdle").style.display = "flex";
   document.getElementById("callTimer").textContent = "00:00";
   document.getElementById("callOptions").innerHTML = "";
+  scheduleIncomingCall();
 }
 document.getElementById("hangupBtn").addEventListener("click", endCall);
 renderContacts();
