@@ -215,6 +215,7 @@
   .chat-bubble.me{align-self:flex-end; background:#9333ea; color:#fff; border-bottom-right-radius:4px;}
   .chat-bubble.typing{opacity:0.6; font-style:italic;}
   .chat-sender-label{font-size:0.68rem; font-weight:bold; opacity:0.75; margin-bottom:2px;}
+  .chat-system-msg{align-self:center; font-size:0.72rem; opacity:0.6; text-align:center; padding:2px 10px; color:#e5e7eb;}
   .chat-input-row{display:flex; gap:8px; padding-top:8px; flex-shrink:0;}
   .chat-input{
     flex:1; min-width:0; border:none; border-radius:999px; padding:9px 14px; font-size:0.85rem;
@@ -1324,6 +1325,13 @@ function renderTextContacts(){
 function addChatBubble(sender, text){
   const thread = document.getElementById("chatThread");
   const bubble = document.createElement("div");
+  if (sender === "system"){
+    bubble.className = "chat-system-msg";
+    bubble.textContent = text;
+    thread.appendChild(bubble);
+    thread.scrollTop = thread.scrollHeight;
+    return bubble;
+  }
   const cls = sender === "me" ? "me" : "them";
   bubble.className = "chat-bubble " + cls;
   if (cls === "them" && sender !== "them" && currentTextContact && currentTextContact.isGroup){
@@ -1366,6 +1374,10 @@ const CHAT_FUNCTION_URL = SUPABASE_URL + "/functions/v1/benjamins-auto-chat";
 // and returning resumes exactly where it left off. Only the explicit
 // "← Contacts" button ends the currently-displayed conversation view.
 const chatHistories = {};
+// Group chats can be "left" (typing "LE") and rejoined (tapping the contact
+// tile again) — tracked by contact name so it'd extend cleanly to a future
+// second group without changes.
+const leftGroups = new Set();
 function getHistoryFor(contact){
   if (!chatHistories[contact.name]) chatHistories[contact.name] = [];
   return chatHistories[contact.name];
@@ -1437,6 +1449,20 @@ function openChat(contact){
   document.getElementById("chatInput").value = "";
 
   const history = getHistoryFor(contact);
+
+  if (contact.isGroup && leftGroups.has(contact.name)){
+    leftGroups.delete(contact.name);
+    clearTimeout(chatTypingTimeout);
+    chatTypingTimeout = setTimeout(() => {
+      if (currentTextContact !== contact) return;
+      tone(700, 0, 0.12, "sine", 0.12);
+      const msg = "You rejoined the group chat 🎉";
+      addChatBubble("system", msg);
+      history.push({ who:"system", text: msg });
+    }, 400);
+    return;
+  }
+
   if (history.length > 0) return; // resuming an existing conversation — no opener needed
 
   clearTimeout(chatTypingTimeout);
@@ -1472,10 +1498,37 @@ document.getElementById("chatBackBtn").addEventListener("click", () => {
   document.getElementById("textingList").style.display = "flex";
 });
 
+// Typing "LE" in a group chat leaves it — a system message shows, then it
+// drops back to the contact list. Tapping the group's tile again (openChat)
+// rejoins. Local-only, no AI call involved.
+function leaveGroupChat(contact){
+  tone(320, 0, 0.15, "sine", 0.12);
+  const history = getHistoryFor(contact);
+  const msg = "You left the group chat 👋";
+  addChatBubble("system", msg);
+  history.push({ who:"system", text: msg });
+  document.getElementById("chatInput").value = "";
+  leftGroups.add(contact.name);
+
+  setTimeout(() => {
+    if (currentTextContact !== contact) return; // already navigated away some other way
+    openTextContactName = null;
+    currentTextContact = null;
+    document.getElementById("textingChat").style.display = "none";
+    document.getElementById("textingList").style.display = "flex";
+  }, 900);
+}
+
 async function sendChatMessage(){
   const input = document.getElementById("chatInput");
   const text = input.value.trim();
   if (!text || !currentTextContact) return;
+
+  if (currentTextContact.isGroup && text.toLowerCase() === "le"){
+    leaveGroupChat(currentTextContact);
+    return;
+  }
+
   tone(500, 0, 0.08, "triangle", 0.12);
   addChatBubble("me", text);
   input.value = "";
