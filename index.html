@@ -1383,11 +1383,61 @@ function getHistoryFor(contact){
   return chatHistories[contact.name];
 }
 
+// Group MEMBERS (Jake/Ava) can also leave the group chat on their own — a
+// small independent random chance per message, separate from Ben leaving
+// (leftGroups above). Tracked per contact.name -> Set of absent member names.
+const leftGroupMembers = {};
+function leftMembersFor(contact){
+  if (!leftGroupMembers[contact.name]) leftGroupMembers[contact.name] = new Set();
+  return leftGroupMembers[contact.name];
+}
+
+// Rolls whether each present member wanders off, and whether each absent
+// member wanders back, posting a system message for any change. If a roll
+// would leave literally everyone absent, one is pulled back immediately so
+// Ben is never left texting into a total void with no explanation.
+// Called from inside the reply chain (renderReplyFor), right before that
+// specific message gets answered — NOT at send-time — so a fast double-text
+// can't roll "Jake left" for message B while message A's reply (queued
+// before he left) is still processing; each message's presence check
+// happens in true chat order, in its own turn.
+function maybeUpdateGroupPresence(contact){
+  if (!contact.isGroup) return;
+  const leftSet = leftMembersFor(contact);
+  const history = getHistoryFor(contact);
+  const isViewingNow = () => currentTextContact === contact &&
+    document.getElementById("textingChat").style.display === "flex" &&
+    document.getElementById("screen-texting").classList.contains("active");
+  const announce = (msg) => {
+    history.push({ who:"system", text: msg });
+    if (isViewingNow()) addChatBubble("system", msg);
+  };
+  contact.members.forEach(name => {
+    if (leftSet.has(name)){
+      if (Math.random() < 0.25){
+        leftSet.delete(name);
+        announce(`${name} rejoined the group chat 🎉`);
+      }
+    } else if (Math.random() < 0.06){
+      leftSet.add(name);
+      announce(`${name} left the group chat 👋`);
+    }
+  });
+  if (leftSet.size === contact.members.length){
+    const backName = contact.members[Math.floor(Math.random() * contact.members.length)];
+    leftSet.delete(backName);
+    announce(`${backName} rejoined the group chat 🎉`);
+  }
+}
+
 // Returns an array of { who, text } — one entry for a 1:1 chat ("who" is
-// "them"), or 1-2 entries for the group chat ("who" is the exact member name,
-// e.g. "Jake"), since not everyone always chimes in on every message.
+// "them"), or however many the group chat's currently-present members
+// generate (see maybeUpdateGroupPresence — an absent member won't reply).
 async function getBotReplies(contact, priorHistory, text){
-  const participants = contact.isGroup ? contact.members : [contact.name];
+  const participants = contact.isGroup
+    ? contact.members.filter(name => !leftMembersFor(contact).has(name))
+    : [contact.name];
+  if (participants.length === 0) return [];
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000);
@@ -1519,43 +1569,37 @@ function leaveGroupChat(contact){
   }, 900);
 }
 
-async function sendChatMessage(){
-  const input = document.getElementById("chatInput");
-  const text = input.value.trim();
-  if (!text || !currentTextContact) return;
+// Double-texting: nothing stops the kid sending several messages before a
+// reply comes back, but without this, whichever network call happened to
+// resolve first would render its reply first — possibly out of send order.
+// Chaining each contact's reply-rendering onto the previous one (keyed by
+// contact.name) guarantees replies always land in the order they were sent,
+// however the network responses actually arrive.
+const replyChains = {};
 
-  if (currentTextContact.isGroup && text.toLowerCase() === "le"){
-    leaveGroupChat(currentTextContact);
-    return;
-  }
+async function renderReplyFor(contact, priorHistory, text){
+  maybeUpdateGroupPresence(contact); // Jake/Ava may wander off or wander back — rolled at this message's turn, not send-time
 
-  tone(500, 0, 0.08, "triangle", 0.12);
-  addChatBubble("me", text);
-  input.value = "";
+  const stillViewingThisChat = () => currentTextContact === contact &&
+    document.getElementById("textingChat").style.display === "flex" &&
+    document.getElementById("screen-texting").classList.contains("active");
 
-  const contact = currentTextContact;
-  const history = getHistoryFor(contact);
-  const priorHistory = history.slice();
-  history.push({ who:"me", text });
-  const typingBubble = addTypingBubble();
+  const typingBubble = stillViewingThisChat() ? addTypingBubble() : null;
 
   const [replies] = await Promise.all([
     getBotReplies(contact, priorHistory, text),
     new Promise(r => setTimeout(r, 500)), // minimum typing-indicator time so instant replies don't feel jarring
   ]);
 
+  const history = getHistoryFor(contact);
   replies.forEach(r => history.push({ who: r.who, text: r.text }));
 
-  // Only touch the DOM if this exact conversation is still the one on screen
-  // (the kid may have switched apps, or picked a different contact, while
-  // the reply was in flight) — the history push above still happened either
-  // way, so it'll show correctly next time they open this contact.
-  const stillViewingThisChat = () => currentTextContact === contact &&
-    document.getElementById("textingChat").style.display === "flex" &&
-    document.getElementById("screen-texting").classList.contains("active");
+  if (typingBubble) typingBubble.remove();
+  // Re-check: the kid may have switched apps, left the group, or picked a
+  // different contact while the reply was in flight — the history push
+  // above still happened either way, so it'll show correctly next visit.
   if (!stillViewingThisChat()) return;
 
-  typingBubble.remove();
   for (let i = 0; i < replies.length; i++){
     if (i > 0){
       await new Promise(r => setTimeout(r, 500 + Math.random() * 500));
@@ -1564,6 +1608,31 @@ async function sendChatMessage(){
     tone(700, 0, 0.12, "sine", 0.12);
     addChatBubble(replies[i].who, replies[i].text);
   }
+}
+
+async function sendChatMessage(){
+  const input = document.getElementById("chatInput");
+  const text = input.value.trim();
+  if (!text || !currentTextContact) return;
+  const contact = currentTextContact;
+
+  if (contact.isGroup && text.toLowerCase() === "le"){
+    leaveGroupChat(contact);
+    return;
+  }
+
+  tone(500, 0, 0.08, "triangle", 0.12);
+  addChatBubble("me", text);
+  input.value = "";
+
+  const history = getHistoryFor(contact);
+  const priorHistory = history.slice();
+  history.push({ who:"me", text });
+
+  const prevChain = replyChains[contact.name] || Promise.resolve();
+  const nextChain = prevChain.catch(() => {}).then(() => renderReplyFor(contact, priorHistory, text));
+  replyChains[contact.name] = nextChain;
+  await nextChain;
 }
 document.getElementById("chatSendBtn").addEventListener("click", sendChatMessage);
 document.getElementById("chatInput").addEventListener("keydown", (e) => {
