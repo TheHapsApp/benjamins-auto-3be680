@@ -195,10 +195,21 @@
   .call-btn.decline{background:#ef4444;}
   .call-btn.leave{background:#ef4444; width:auto; border-radius:999px; padding:0 18px; font-size:0.9rem; font-weight:bold; height:40px;}
   .call-timer{font-size:1.2rem; font-weight:bold;}
-  .call-msg{font-size:0.85rem; background:rgba(255,255,255,0.12); border-radius:10px; padding:6px 12px; max-width:220px;}
-  .call-options{display:flex; gap:10px;}
-  .call-option-btn{background:rgba(255,255,255,0.18); border:2px solid #fff; border-radius:999px; padding:8px 14px; color:#fff; font-family:inherit; font-weight:bold; font-size:0.78rem; cursor:pointer;}
-  .call-option-btn:active{transform:translateY(2px);}
+  .phone-active{justify-content:flex-start;}
+  .call-thread{width:100%; flex:1; min-height:0; overflow-y:auto; display:flex; flex-direction:column; gap:6px; padding:4px 2px;}
+  .call-bubble{max-width:78%; padding:7px 11px; border-radius:14px; font-size:0.8rem; text-align:left; line-height:1.3; word-wrap:break-word;}
+  .call-bubble.them{align-self:flex-start; background:rgba(255,255,255,0.15); border-bottom-left-radius:4px;}
+  .call-bubble.me{align-self:flex-end; background:#2563eb; border-bottom-right-radius:4px;}
+  .call-bubble.typing{opacity:0.6; font-style:italic;}
+  .call-system-msg{align-self:center; font-size:0.68rem; opacity:0.6; text-align:center; padding:2px 8px;}
+  .call-input-row{display:flex; gap:8px; width:100%; flex-shrink:0;}
+  .call-input{
+    flex:1; min-width:0; border:none; border-radius:999px; padding:8px 12px; font-size:0.8rem;
+    font-family:inherit; background:rgba(255,255,255,0.95); color:#333; -webkit-user-select:text; user-select:text;
+  }
+  .call-input:focus{outline:2px solid #2563eb;}
+  .call-send-btn{width:36px; height:36px; border-radius:50%; border:none; background:#2563eb; color:#fff; font-size:1rem; cursor:pointer; flex-shrink:0;}
+  .call-send-btn:active{transform:translateY(2px);}
 
   /* ---- texting ---- */
   .texting-list,.texting-chat{display:none; height:100%; padding:10px; box-sizing:border-box;}
@@ -408,8 +419,11 @@
         <div class="caller-avatar" id="activeAvatar">👩</div>
         <div class="caller-name" id="activeName">Mom</div>
         <div class="call-timer" id="callTimer">00:00</div>
-        <div class="call-msg" id="callMsg"></div>
-        <div class="call-options" id="callOptions"></div>
+        <div class="call-thread" id="callThread"></div>
+        <div class="call-input-row">
+          <input type="text" class="call-input" id="callInput" placeholder="Say something..." autocomplete="off" maxlength="300">
+          <button class="call-send-btn" id="callSendBtn">➤</button>
+        </div>
         <button class="call-btn leave" id="hangupBtn">✖ Hang Up</button>
       </div>
     </div>
@@ -494,7 +508,7 @@ function tone(freq, start, dur, type, gainMax){
 // ---------- navigation ----------
 const backBtn = document.getElementById("backBtn");
 let musicInterval = null, callingTimeout = null, callTimerInterval = null;
-let scriptTimeout1 = null, scriptTimeout2 = null, scriptTimeout3 = null;
+let callTypingTimeout = null, currentCallContact = null;
 let incomingCallTimeout = null, incomingRingInterval = null;
 let chatTypingTimeout = null, currentTextContact = null, openTextContactName = null, photoMode = false;
 let musicPlaying = false, callSeconds = 0;
@@ -510,9 +524,8 @@ function resetAppStates(){
   clearInterval(musicInterval); musicInterval = null;
   clearTimeout(callingTimeout); callingTimeout = null;
   clearInterval(callTimerInterval); callTimerInterval = null;
-  clearTimeout(scriptTimeout1); scriptTimeout1 = null;
-  clearTimeout(scriptTimeout2); scriptTimeout2 = null;
-  clearTimeout(scriptTimeout3); scriptTimeout3 = null;
+  clearTimeout(callTypingTimeout); callTypingTimeout = null;
+  currentCallContact = null;
   cancelIncomingCall();
   // Texting state is deliberately NOT reset here — switching to another app
   // and back should resume the in-progress conversation, not restart it.
@@ -525,8 +538,8 @@ function resetAppStates(){
 
   callSeconds = 0;
   document.getElementById("callTimer").textContent = "00:00";
-  document.getElementById("callOptions").innerHTML = "";
-  document.getElementById("hangupBtn").style.display = "";
+  document.getElementById("callThread").innerHTML = "";
+  document.getElementById("callInput").value = "";
   document.getElementById("phoneIdle").style.display = "flex";
   document.getElementById("phoneCalling").style.display = "none";
   document.getElementById("phoneActive").style.display = "none";
@@ -880,91 +893,19 @@ document.getElementById("musicNext").addEventListener("click", () => {
 renderPlaylistRow();
 
 // ---------- phone ----------
+// Calls now use the same real-AI backend as Texting (getBotReplies), so
+// contacts have genuine open-ended conversations on a call — including
+// already knowing about each other (ROSTER_NOTE, baked into every persona's
+// system prompt on the backend) and reacting to whatever Ben actually says,
+// not a fixed branching script. openers here are purely local/instant so a
+// call feels like it connects right away, before any network round trip.
 const CONTACTS = [
-  { name:"Mom", emo:"👩", bye:"Bye!", bySeason:{
-      spring: { question:"Want to plant flowers in the garden?",
-        options:[{ label:"Yes let's plant! 🌱", reply:"Yes let's plant!", response:"Yay, grab your gloves!" },
-                 { label:"Maybe later", reply:"Maybe later", response:"Okay, they'll wait for us!" }] },
-      summer: { question:"Can you help set the table for dinner?",
-        options:[{ label:"Sure Mom! 👍", reply:"Sure Mom!", response:"Thanks, sweetie!" },
-                 { label:"In a minute", reply:"In a minute!", response:"Okay, don't forget!" }] },
-      fall:   { question:"Want to rake leaves with me?",
-        options:[{ label:"Sure! 🍂", reply:"Sure!", response:"Great, bring your jacket!" },
-                 { label:"Not right now", reply:"Not right now", response:"Okay, later then!" }] },
-      winter: { question:"Want to bake cookies for the holidays?",
-        options:[{ label:"Yes please! 🍪", reply:"Yes please!", response:"Yay, I'll get the mixer!" },
-                 { label:"Maybe tomorrow", reply:"Maybe tomorrow", response:"Okay, sounds good!" }] },
-  }},
-  { name:"Dad", emo:"👨", bye:"Goodbye!", bySeason:{
-      spring: { question:"Want to fly a kite at the park?",
-        options:[{ label:"Heck yeah! 🪁", reply:"Heck yeah!", response:"Awesome, let's go!" },
-                 { label:"Not today", reply:"Not today, Dad", response:"Okay, next time!" }] },
-      summer: { question:"Want to shoot some hoops later?",
-        options:[{ label:"Heck yeah! 🏀", reply:"Heck yeah!", response:"Sounds good!" },
-                 { label:"Not today", reply:"Not today, Dad", response:"No worries!" }] },
-      fall:   { question:"Want to go apple picking?",
-        options:[{ label:"Yes! 🍎", reply:"Yes!", response:"Great, grab a basket!" },
-                 { label:"Not today", reply:"Not today, Dad", response:"Okay, another time!" }] },
-      winter: { question:"Want to build a snowman?",
-        options:[{ label:"Yes! ⛄", reply:"Yes!", response:"Let's do it!" },
-                 { label:"Too cold", reply:"Too cold, Dad", response:"Ha, fair enough!" }] },
-  }},
-  { name:"Grandma", emo:"👵", bye:"Bye bye!", bySeason:{
-      spring: { question:"Want to come see my garden bloom?",
-        options:[{ label:"Yes please! 🌷", reply:"Yes please!", response:"Wonderful, see you soon!" },
-                 { label:"Maybe next time", reply:"Maybe next time", response:"Okay dear!" }] },
-      summer: { question:"Want to come over for cookies this weekend?",
-        options:[{ label:"Yes please! 🍪", reply:"Yes please!", response:"Okay dear!" },
-                 { label:"Maybe next time", reply:"Maybe next time", response:"Alright, another time!" }] },
-      fall:   { question:"Want to help me bake a pumpkin pie?",
-        options:[{ label:"Yes please! 🎃", reply:"Yes please!", response:"Yay, wear your apron!" },
-                 { label:"Maybe next time", reply:"Maybe next time", response:"Okay dear!" }] },
-      winter: { question:"Want to come decorate the tree with me?",
-        options:[{ label:"Yes please! 🎄", reply:"Yes please!", response:"I'll put the kettle on!" },
-                 { label:"Maybe next time", reply:"Maybe next time", response:"Okay dear!" }] },
-  }},
-  { name:"Grandpa", emo:"👴", bye:"Goodbye!", bySeason:{
-      spring: { question:"Want to help me plant tomatoes?",
-        options:[{ label:"Can't wait! 🍅", reply:"Can't wait!", response:"Great, grab a shovel!" },
-                 { label:"We'll see", reply:"We'll see", response:"Alright!" }] },
-      summer: { question:"Ready to go fishing Saturday?",
-        options:[{ label:"Can't wait! 🎣", reply:"Can't wait!", response:"Alright!" },
-                 { label:"We'll see", reply:"We'll see", response:"Okay, let me know!" }] },
-      fall:   { question:"Want to rake leaves into a big pile?",
-        options:[{ label:"Can't wait! 🍁", reply:"Can't wait!", response:"Ha, let's jump in it after!" },
-                 { label:"We'll see", reply:"We'll see", response:"Alright!" }] },
-      winter: { question:"Want to go sledding this weekend?",
-        options:[{ label:"Can't wait! 🛷", reply:"Can't wait!", response:"Woo-hoo, see you there!" },
-                 { label:"We'll see", reply:"We'll see", response:"Okay, bundle up either way!" }] },
-  }},
-  { name:"Jake", emo:"👦", bye:"Bye!", bySeason:{
-      spring: { question:"Wanna fly kites after school?",
-        options:[{ label:"Sure! 🪁", reply:"Sure!", response:"Awesome!" },
-                 { label:"Maybe later", reply:"Maybe later after school", response:"Okay, later then!" }] },
-      summer: { question:"Wanna play after school?",
-        options:[{ label:"Sure! 👍", reply:"Sure!", response:"Cool!" },
-                 { label:"Maybe later", reply:"Maybe later after school", response:"Okay, no biggie!" }] },
-      fall:   { question:"Wanna jump in leaf piles?",
-        options:[{ label:"Sure! 🍂", reply:"Sure!", response:"Cool, let's go!" },
-                 { label:"Maybe later", reply:"Maybe later after school", response:"Okay, later!" }] },
-      winter: { question:"Wanna have a snowball fight?",
-        options:[{ label:"Sure! ❄️", reply:"Sure!", response:"Yes! Get ready!" },
-                 { label:"Maybe later", reply:"Maybe later after school", response:"Okay, fine!" }] },
-  }},
-  { name:"Ava", emo:"👧", bye:"Goodbye!", bySeason:{
-      spring: { question:"Want to ride bikes and see the flowers?",
-        options:[{ label:"Let's go! 🌸", reply:"Let's go!", response:"Yay, see you soon!" },
-                 { label:"Not right now", reply:"Not right now", response:"Okay, another time!" }] },
-      summer: { question:"Wanna go swimming?",
-        options:[{ label:"Sure! 🏊", reply:"Sure, probably after school", response:"Yay, can't wait!" },
-                 { label:"Maybe tomorrow", reply:"Maybe tomorrow", response:"Okay, no worries!" }] },
-      fall:   { question:"Want to go on a hayride?",
-        options:[{ label:"Let's go! 🌾", reply:"Let's go!", response:"Yay, so fun!" },
-                 { label:"Not right now", reply:"Not right now", response:"Okay, another time!" }] },
-      winter: { question:"Want to go ice skating?",
-        options:[{ label:"Let's go! ⛸️", reply:"Let's go!", response:"Yes! See you there!" },
-                 { label:"Not right now", reply:"Not right now", response:"Okay, no worries!" }] },
-  }},
+  { name:"Mom", emo:"👩", openers:["Hi honey! What's going on?","Hey sweetie, everything okay?","Hi! Good to hear your voice!"] },
+  { name:"Dad", emo:"👨", openers:["Hey buddy! What's up?","Hi! What's going on?","Hey! Good timing, what's up?"] },
+  { name:"Grandma", emo:"👵", openers:["Hello dear! So good to hear from you!","Hi sweetheart! How are you?","Hello! What a nice surprise!"] },
+  { name:"Grandpa", emo:"👴", openers:["Hiya kiddo! What's up?","Hey there, champ! Good to hear from you!","Hello! What's on your mind?"] },
+  { name:"Jake", emo:"👦", openers:["yo!! whats up","hey dude, whats going on","heyyy whats up man"] },
+  { name:"Ava", emo:"👧", openers:["hii!! whats up 🌸","hey bestie!! whats going on","omg hii, whats new"] },
 ];
 function formatTime(s){
   const m = Math.floor(s / 60);
@@ -1035,41 +976,130 @@ function triggerIncomingCall(){
     scheduleIncomingCall();
   };
 }
+// Each call gets a fresh transcript (calls don't persist across hang-up the
+// way texting conversations persist across navigation — that's not part of
+// what was asked, and matches how a real phone call isn't "resumed").
+const callHistories = {};
+const callReplyChains = {};
+
+function addCallBubble(sender, text){
+  const thread = document.getElementById("callThread");
+  const bubble = document.createElement("div");
+  if (sender === "system"){
+    bubble.className = "call-system-msg";
+    bubble.textContent = text;
+    thread.appendChild(bubble);
+    thread.scrollTop = thread.scrollHeight;
+    return bubble;
+  }
+  bubble.className = "call-bubble " + (sender === "me" ? "me" : "them");
+  bubble.textContent = text;
+  thread.appendChild(bubble);
+  thread.scrollTop = thread.scrollHeight;
+  return bubble;
+}
+
+function addCallTypingBubble(){
+  const thread = document.getElementById("callThread");
+  const bubble = document.createElement("div");
+  bubble.className = "call-bubble them typing";
+  bubble.textContent = "...";
+  thread.appendChild(bubble);
+  thread.scrollTop = thread.scrollHeight;
+  return bubble;
+}
+
+// If Ben asks a group member (currently away, per leftGroupMembers) to come
+// back to the group chat, actually bring them back — updates the group's
+// real chatHistories/presence state so it's reflected next time Texting is
+// opened, plus a little confirmation right here in the call.
+const INVITE_BACK_RE = /\b(come back|rejoin|re-?join|back (in|into|to) the group|join (the )?group( chat)?)\b/i;
+function maybeInviteBackToGroup(contact, text){
+  if (!INVITE_BACK_RE.test(text)) return;
+  const groupContact = TEXT_CONTACTS.find(c => c.isGroup && c.members.includes(contact.name));
+  if (!groupContact) return;
+  const leftSet = leftMembersFor(groupContact);
+  if (!leftSet.has(contact.name)) return; // not currently away — nothing to do
+  leftSet.delete(contact.name);
+  getHistoryFor(groupContact).push({ who:"system", text: `${contact.name} rejoined the group chat 🎉` });
+  addCallBubble("system", `${contact.name} is heading back to the group chat!`);
+}
+
+async function renderCallReplyFor(contact, priorHistory, text){
+  const stillOnThisCall = () => currentCallContact === contact &&
+    document.getElementById("phoneActive").style.display === "flex" &&
+    document.getElementById("screen-phone").classList.contains("active");
+
+  const typingBubble = stillOnThisCall() ? addCallTypingBubble() : null;
+
+  const [replies] = await Promise.all([
+    getBotReplies(contact, priorHistory, text),
+    new Promise(r => setTimeout(r, 500)),
+  ]);
+
+  const history = callHistories[contact.name] || (callHistories[contact.name] = []);
+  replies.forEach(r => history.push({ who:"them", text: r.text }));
+
+  if (typingBubble) typingBubble.remove();
+  if (!stillOnThisCall()) return;
+
+  for (let i = 0; i < replies.length; i++){
+    if (i > 0){
+      await new Promise(r => setTimeout(r, 500 + Math.random() * 500));
+      if (!stillOnThisCall()) return;
+    }
+    tone(700, 0, 0.12, "sine", 0.12);
+    addCallBubble("them", replies[i].text);
+  }
+}
+
+async function sendCallMessage(){
+  const input = document.getElementById("callInput");
+  const text = input.value.trim();
+  if (!text || !currentCallContact) return;
+  const contact = currentCallContact;
+
+  tone(500, 0, 0.08, "triangle", 0.12);
+  addCallBubble("me", text);
+  input.value = "";
+
+  const history = callHistories[contact.name] || (callHistories[contact.name] = []);
+  const priorHistory = history.slice();
+  history.push({ who:"me", text });
+
+  maybeInviteBackToGroup(contact, text);
+
+  const prevChain = callReplyChains[contact.name] || Promise.resolve();
+  const nextChain = prevChain.catch(() => {}).then(() => renderCallReplyFor(contact, priorHistory, text));
+  callReplyChains[contact.name] = nextChain;
+  await nextChain;
+}
+document.getElementById("callSendBtn").addEventListener("click", sendCallMessage);
+document.getElementById("callInput").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") sendCallMessage();
+});
+
 function connectCall(contact){
   tone(880, 0, 0.15, "sine", 0.15);
   document.getElementById("phoneCalling").style.display = "none";
   document.getElementById("phoneActive").style.display = "flex";
   document.getElementById("activeAvatar").textContent = contact.emo;
   document.getElementById("activeName").textContent = contact.name;
+  document.getElementById("callThread").innerHTML = "";
+  document.getElementById("callInput").value = "";
 
-  const msgEl = document.getElementById("callMsg");
-  const optsEl = document.getElementById("callOptions");
-  const hangupBtn = document.getElementById("hangupBtn");
-  optsEl.innerHTML = "";
-  hangupBtn.style.display = "";
+  currentCallContact = contact;
+  callHistories[contact.name] = [];
 
-  const script = contact.bySeason[currentSeason];
-  msgEl.textContent = contact.name + ": " + script.question;
-  script.options.forEach(opt => {
-    const btn = document.createElement("button");
-    btn.className = "call-option-btn";
-    btn.textContent = opt.label;
-    btn.addEventListener("click", () => {
-      tone(500, 0, 0.1, "triangle", 0.12);
-      optsEl.innerHTML = "";
-      hangupBtn.style.display = "none";
-      msgEl.textContent = "You: " + opt.reply;
-      scriptTimeout1 = setTimeout(() => {
-        tone(700, 0, 0.15, "sine", 0.12);
-        msgEl.textContent = contact.name + ": " + opt.response;
-      }, 1100);
-      scriptTimeout2 = setTimeout(() => {
-        msgEl.textContent = contact.name + ": " + contact.bye;
-      }, 2400);
-      scriptTimeout3 = setTimeout(endCall, 3800);
-    });
-    optsEl.appendChild(btn);
-  });
+  const opener = contact.openers[Math.floor(Math.random() * contact.openers.length)];
+  clearTimeout(callTypingTimeout);
+  callTypingTimeout = setTimeout(() => {
+    if (currentCallContact !== contact) return;
+    tone(700, 0, 0.12, "sine", 0.12);
+    addCallBubble("them", opener);
+    callHistories[contact.name].push({ who:"them", text: opener });
+  }, 500);
+  document.getElementById("callInput").focus();
 
   callSeconds = 0;
   callTimerInterval = setInterval(() => {
@@ -1079,12 +1109,12 @@ function connectCall(contact){
 }
 function endCall(){
   clearInterval(callTimerInterval); callTimerInterval = null;
-  clearTimeout(scriptTimeout1); scriptTimeout1 = null;
-  clearTimeout(scriptTimeout2); scriptTimeout2 = null;
+  clearTimeout(callTypingTimeout); callTypingTimeout = null;
+  currentCallContact = null;
   document.getElementById("phoneActive").style.display = "none";
   document.getElementById("phoneIdle").style.display = "flex";
   document.getElementById("callTimer").textContent = "00:00";
-  document.getElementById("callOptions").innerHTML = "";
+  document.getElementById("callThread").innerHTML = "";
   scheduleIncomingCall();
 }
 document.getElementById("hangupBtn").addEventListener("click", endCall);
