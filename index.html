@@ -68,6 +68,7 @@
   .car-icon.maps{background:#137333;}
   .car-icon.phone{background:#2563eb;}
   .car-icon.climate{background:#0891b2;}
+  .car-icon.texting{background:#9333ea;}
 
   /* ---- maps ---- */
   .map-bg{position:absolute; inset:0; background:#dbe9d8; overflow:hidden;}
@@ -92,6 +93,15 @@
   .map-topbar{position:absolute; top:46px; right:8px; z-index:3;}
   .home-shortcut{background:#fff; border:none; border-radius:999px; padding:7px 12px; font-weight:bold; font-size:0.8rem; color:#1a73e8; cursor:pointer; font-family:inherit;}
   .home-shortcut:active{transform:translateY(1px);}
+  .recent-notifs{position:absolute; top:86px; right:8px; z-index:3; display:flex; flex-direction:column; gap:6px; align-items:flex-end;}
+  .recent-notif{
+    background:rgba(17,24,39,0.85); border:none; border-radius:10px; padding:6px 10px;
+    display:flex; align-items:center; gap:6px; cursor:pointer; font-family:inherit;
+    box-shadow:0 2px 0 rgba(0,0,0,0.25);
+  }
+  .recent-notif:active{transform:translateY(1px);}
+  .recent-notif-emo{font-size:1.1rem;}
+  .recent-notif-label{font-size:0.68rem; font-weight:bold; color:#e5e7eb; max-width:130px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
   .season-picker{position:absolute; top:46px; left:8px; display:flex; gap:4px; z-index:4;}
   .season-btn{width:26px; height:26px; border-radius:50%; border:2px solid #fff; background:rgba(255,255,255,0.25); font-size:0.85rem; display:flex; align-items:center; justify-content:center; cursor:pointer; padding:0;}
   .season-btn.selected{background:#fff; box-shadow:0 0 0 2px #4fa8ff;}
@@ -190,6 +200,29 @@
   .call-option-btn{background:rgba(255,255,255,0.18); border:2px solid #fff; border-radius:999px; padding:8px 14px; color:#fff; font-family:inherit; font-weight:bold; font-size:0.78rem; cursor:pointer;}
   .call-option-btn:active{transform:translateY(2px);}
 
+  /* ---- texting ---- */
+  .texting-list,.texting-chat{display:none; height:100%; padding:10px; box-sizing:border-box;}
+  .texting-list{display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px;}
+  .texting-chat{flex-direction:column;}
+  .chat-header{display:flex; align-items:center; gap:8px; padding-bottom:8px; color:#e5e7eb; flex-shrink:0;}
+  .chat-back-btn{background:none; border:none; color:#e5e7eb; font-size:0.85rem; font-weight:bold; cursor:pointer; font-family:inherit; padding:4px 2px;}
+  .chat-back-btn:active{opacity:0.7;}
+  .chat-header-emo{font-size:1.4rem;}
+  .chat-header-name{font-weight:bold; font-size:1rem;}
+  .chat-thread{flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:8px; padding:6px 2px;}
+  .chat-bubble{max-width:75%; padding:8px 12px; border-radius:14px; font-size:0.82rem; text-align:left; line-height:1.35; word-wrap:break-word;}
+  .chat-bubble.them{align-self:flex-start; background:rgba(255,255,255,0.15); color:#e5e7eb; border-bottom-left-radius:4px;}
+  .chat-bubble.me{align-self:flex-end; background:#9333ea; color:#fff; border-bottom-right-radius:4px;}
+  .chat-bubble.typing{opacity:0.6; font-style:italic;}
+  .chat-input-row{display:flex; gap:8px; padding-top:8px; flex-shrink:0;}
+  .chat-input{
+    flex:1; min-width:0; border:none; border-radius:999px; padding:9px 14px; font-size:0.85rem;
+    font-family:inherit; background:rgba(255,255,255,0.95); color:#333; -webkit-user-select:text; user-select:text;
+  }
+  .chat-input:focus{outline:2px solid #9333ea;}
+  .chat-send-btn{width:40px; height:40px; border-radius:50%; border:none; background:#9333ea; color:#fff; font-size:1.1rem; cursor:pointer; flex-shrink:0;}
+  .chat-send-btn:active{transform:translateY(2px);}
+
   /* ---- climate ---- */
   .climate-card{display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; gap:10px; color:#e5e7eb; padding:8px;}
   .temp-block{display:flex; align-items:center; gap:14px;}
@@ -250,6 +283,10 @@
         <button class="car-app" data-screen="phone">
           <div class="car-icon phone">📞</div>
           <div class="car-label">Phone</div>
+        </button>
+        <button class="car-app" data-screen="texting">
+          <div class="car-icon texting">💬</div>
+          <div class="car-label">Texting</div>
         </button>
         <button class="car-app" data-screen="climate">
           <div class="car-icon climate">🌡️</div>
@@ -331,6 +368,7 @@
       <div class="map-topbar">
         <button class="home-shortcut" id="homeShortcutBtn">🏠 Home</button>
       </div>
+      <div class="recent-notifs" id="recentNotifs"></div>
       <div class="nav-banner" id="navBanner"></div>
       <div class="traffic-badge" id="trafficBadge"></div>
     </div>
@@ -364,6 +402,25 @@
         <div class="call-msg" id="callMsg"></div>
         <div class="call-options" id="callOptions"></div>
         <button class="call-btn leave" id="hangupBtn">✖ Hang Up</button>
+      </div>
+    </div>
+
+    <!-- ==== TEXTING ==== -->
+    <div class="car-screen" id="screen-texting">
+      <div class="texting-list" id="textingList">
+        <div class="contact-grid" id="textContactGrid"></div>
+      </div>
+      <div class="texting-chat" id="textingChat">
+        <div class="chat-header">
+          <button class="chat-back-btn" id="chatBackBtn">← Contacts</button>
+          <span class="chat-header-emo" id="chatHeaderEmo">👩</span>
+          <span class="chat-header-name" id="chatHeaderName">Mom</span>
+        </div>
+        <div class="chat-thread" id="chatThread"></div>
+        <div class="chat-input-row">
+          <input type="text" class="chat-input" id="chatInput" placeholder="Type a message..." autocomplete="off" maxlength="80">
+          <button class="chat-send-btn" id="chatSendBtn">➤</button>
+        </div>
       </div>
     </div>
 
@@ -429,6 +486,7 @@ const backBtn = document.getElementById("backBtn");
 let musicInterval = null, callingTimeout = null, callTimerInterval = null;
 let scriptTimeout1 = null, scriptTimeout2 = null, scriptTimeout3 = null;
 let incomingCallTimeout = null, incomingRingInterval = null;
+let chatTypingTimeout = null, chatToken = 0, currentTextContact = null;
 let musicPlaying = false, callSeconds = 0;
 let driveToken = 0;
 
@@ -446,6 +504,13 @@ function resetAppStates(){
   clearTimeout(scriptTimeout2); scriptTimeout2 = null;
   clearTimeout(scriptTimeout3); scriptTimeout3 = null;
   cancelIncomingCall();
+  clearTimeout(chatTypingTimeout); chatTypingTimeout = null;
+  chatToken++;
+  currentTextContact = null;
+  document.getElementById("textingList").style.display = "flex";
+  document.getElementById("textingChat").style.display = "none";
+  document.getElementById("chatThread").innerHTML = "";
+  document.getElementById("chatInput").value = "";
 
   musicPlaying = false;
   document.getElementById("musicPlay").textContent = "▶️";
@@ -469,6 +534,8 @@ function resetAppStates(){
   const mapCarDot = document.getElementById("mapCarDot");
   mapCarDot.style.left = carPos.x + "%";
   mapCarDot.style.top = carPos.y + "%";
+  isNavigating = false;
+  renderRecentNotifications();
 }
 
 function showCarScreen(id){
@@ -559,12 +626,35 @@ function buildRoute(start, dest){
 }
 
 let carPos = { x: 18, y: 80, axis: "x" };
+let visitHistory = [];
+let isNavigating = false;
+
+function recordVisit(place){
+  if (visitHistory.length && visitHistory[visitHistory.length - 1].id === place.id) return;
+  visitHistory.push(place);
+  if (visitHistory.length > 2) visitHistory.shift();
+}
+
+function renderRecentNotifications(){
+  const box = document.getElementById("recentNotifs");
+  box.innerHTML = "";
+  if (isNavigating || visitHistory.length === 0) return;
+  visitHistory.forEach(place => {
+    const card = document.createElement("button");
+    card.className = "recent-notif";
+    card.innerHTML = `<span class="recent-notif-emo">${place.emo}</span><span class="recent-notif-label">${place.name}</span>`;
+    card.addEventListener("click", () => goToDestination(place));
+    box.appendChild(card);
+  });
+}
 
 function goToDestination(place){
   tone(880, 0, 0.1, "sine", 0.15);
   tone(660, 0.08, 0.15, "sine", 0.12);
   driveToken++;
   const myToken = driveToken;
+  isNavigating = true;
+  renderRecentNotifications();
 
   const dot = document.getElementById("mapCarDot");
   const banner = document.getElementById("navBanner");
@@ -595,6 +685,9 @@ function goToDestination(place){
       }
       banner.textContent = msg;
       badge.style.display = "none";
+      isNavigating = false;
+      recordVisit(place);
+      renderRecentNotifications();
       return;
     }
     const wp = route[i++];
@@ -988,6 +1081,219 @@ function endCall(){
 }
 document.getElementById("hangupBtn").addEventListener("click", endCall);
 renderContacts();
+
+// ---------- texting ----------
+// Kid-friendly local "AI" texting: replies are always picked from a fixed,
+// pre-written, kid-safe bank keyed by keyword category + contact voice.
+// The kid's own typed text is only ever shown back in their own bubble,
+// never fed into or echoed by the bot's reply — so nothing the bot says
+// can be anything other than what we wrote here.
+const TEXT_CONTACTS = [
+  { name:"Mom", emo:"👩", voice:"parent",
+    openers:["Hi honey! What are you up to? 💛","Hey sweetie! How's your day going?","Hi! Just checking in on you 😊"] },
+  { name:"Dad", emo:"👨", voice:"parent",
+    openers:["Hey buddy! What's up?","Hi! How's it going today?","Hey! Anything fun happening?"] },
+  { name:"Grandma", emo:"👵", voice:"grandparent",
+    openers:["Hello dear! I was just thinking about you 💕","Hi sweetheart! How are you today?","Hello! I baked cookies today 🍪"] },
+  { name:"Grandpa", emo:"👴", voice:"grandparent",
+    openers:["Hiya! What are you up to today?","Hey there! How's my favorite grandkid?","Hello! Catch any good stories lately?"] },
+  { name:"Jake", emo:"👦", voice:"friend",
+    openers:["yo!! whats up 😎","hey hey! you around?","heyyy what are you doing"] },
+  { name:"Ava", emo:"👧", voice:"friend",
+    openers:["hii!! 🌸 whatcha doing","hey! guess what happened today","hi!! miss u, whats new"] },
+];
+
+const CHAT_REPLIES = {
+  bye: {
+    parent: ["Okay, love you! Talk soon. 💛","Bye sweetie, love you!","Okay, see you soon! Love you."],
+    grandparent: ["Bye bye dear, love you lots! 💕","Goodbye sweetheart, talk soon!","Okay dear, love you to bits!"],
+    friend: ["byeee!! 👋","cya later!!","bye bye!!"],
+  },
+  love: {
+    parent: ["I love you too, so so much! 💛","Aww, love you more!","You just made my whole day. Love you!"],
+    grandparent: ["I love you too, sweetheart, more than anything! 💕","Oh my heart! I love you dearly.","Love you to the moon and back, dear!"],
+    friend: ["aww love u too!! 💛","yesss ur the best","love u too bestie"],
+  },
+  sad: {
+    parent: ["Aw, I'm sorry to hear that. I'm here for you. 💛","Come talk to me about it when you're home, okay?","That's tough, but I love you and it'll be okay."],
+    grandparent: ["Oh sweetheart, I'm sorry. Sending you a big hug. 🤗","That sounds hard, dear. I love you very much.","It'll be alright, I promise. I'm always here for you."],
+    friend: ["aw im sorry :( that stinks","thats no good, u ok?","sorry to hear that, here if u need to talk"],
+  },
+  excited: {
+    parent: ["I'm so happy for you!","That's wonderful, sweetie!","Yay! I love your excitement!"],
+    grandparent: ["Oh how exciting, dear!","That's just wonderful news!","I'm so proud of you!"],
+    friend: ["omgggg yes!!","that's so awesome!!","letsss goo 🎉"],
+  },
+  howareyou: {
+    parent: ["I'm doing great, thanks for asking! How about you?","Pretty good! What have you been up to?","I'm good, sweetie! Tell me about your day."],
+    grandparent: ["Oh I'm just wonderful, dear, thank you for asking!","I'm doing fine! Tell your old grandparent what's new.","Can't complain! How's my favorite grandkid doing?"],
+    friend: ["good good! u?","im great lol whats up with u","pretty good!! whatcha doing"],
+  },
+  food: {
+    parent: ["Ooh yum! Want me to make your favorite snack?","Are you hungry? I can whip something up!","That sounds delicious!"],
+    grandparent: ["Oh I just baked cookies, come get some! 🍪","I'll make your favorite treat next time you visit!","Nothing beats a good homemade snack, dear."],
+    friend: ["lol same im starving","ooh can we get ice cream later","yesss food 🍕"],
+  },
+  school: {
+    parent: ["How did that go? I want to hear all about it!","You're working so hard, I'm proud of you!","Homework time? You've got this!"],
+    grandparent: ["School was so different in my day, tell me about yours!","You're such a smart cookie, dear!","I'm sure you did wonderfully!"],
+    friend: ["ugh school is so boring lol","did u finish the homework yet","lol same, so much homework"],
+  },
+  play: {
+    parent: ["That sounds like so much fun! Have a blast!","Go enjoy yourself, sweetie!","Sounds fun! Be safe out there."],
+    grandparent: ["Oh how lovely! I used to play outside all day too.","Have fun, dear! Don't forget your jacket.","That sounds like a wonderful time!"],
+    friend: ["lets play later!!","omg yes lets go to the park","sounds so fun, im down"],
+  },
+  animal: {
+    parent: ["Aww, animals are the best! 🐾","That's so sweet!","I love hearing about that!"],
+    grandparent: ["Oh I do love animals, dear!","How precious! We had a dog when I was your age.","That sounds adorable!"],
+    friend: ["omg so cute 🐶","aww i want a pet too","cuuuute"],
+  },
+  weather: {
+    parent: ["Make sure to dress for the weather!","That sounds like a nice day for it!","Stay cozy out there!"],
+    grandparent: ["Back in my day we'd play outside no matter the weather!","Bundle up if it's chilly, dear!","What lovely weather for it!"],
+    friend: ["lol its crazy out there","perfect weather for outside stuff","so nice today omg"],
+  },
+  joke: {
+    parent: ["Ha! You always make me smile. 😄","That's a good one!","You're so funny!"],
+    grandparent: ["Oh you always make me laugh, dear!","Ha ha, that's a good one!","You're a funny one!"],
+    friend: ["lolllll","hahaha thats so funny","omg dying 😂"],
+  },
+  question: {
+    parent: ["Good question! What do you think?","Hmm, let's figure that out together when I see you!","I'll help you with that later, okay?"],
+    grandparent: ["Oh that's a good question, dear! Let's talk about it soon.","Hmm, ask me when you visit and we'll figure it out!","Great question! I'll think on it."],
+    friend: ["idk lol good question","hmmm not sure, u?","lol i was wondering that too"],
+  },
+  yes: {
+    parent: ["Great, sounds like a plan!","Awesome, let's make it happen!","Perfect!"],
+    grandparent: ["Wonderful, dear! I can't wait.","Oh good! That makes me happy.","Lovely, I'll look forward to it!"],
+    friend: ["yesss lets go","yayyy 🎉","perfect!!"],
+  },
+  no: {
+    parent: ["No worries at all, maybe next time!","That's okay, sweetie!","All good, whenever you're ready!"],
+    grandparent: ["That's alright, dear, another time then.","No worries at all!","Okay dear, whenever suits you."],
+    friend: ["aw ok np","thats fine lol","no worries!"],
+  },
+  greeting: {
+    parent: ["Hi there! 😊","Hey! Good to hear from you.","Hello! 👋"],
+    grandparent: ["Hello dear! 💕","Hi sweetheart!","Well hello there!"],
+    friend: ["heyyy 😎","yooo whats good","hii!!"],
+  },
+  fallback: {
+    parent: ["That's interesting! Tell me more.","Oh really? I want to hear more about that!","Neat! What else is going on?"],
+    grandparent: ["Oh how nice, dear! Tell me more about that.","Is that so! I'd love to hear more.","That sounds lovely, dear."],
+    friend: ["lol cool","oh nice!! tell me more","haha nice"],
+  },
+};
+
+const CATEGORY_PATTERNS = [
+  { cat:"bye", re:/\b(bye|goodbye|gtg|got ?to ?go|talk later|see ya|see you later)\b/ },
+  { cat:"love", re:/\b(love you|love u|miss you|miss u)\b/ },
+  { cat:"sad", re:/\b(sad|cry|crying|upset|mad|angry|scared|hurt|lonely)\b/ },
+  { cat:"excited", re:/\b(yay|awesome|excited|so fun|amazing|can'?t wait)\b/ },
+  { cat:"howareyou", re:/how(’|')?s it going|how are (you|u)|what'?s up|whats up|hows your day/ },
+  { cat:"food", re:/\b(hungry|snack|food|eat|pizza|ice cream|cookie|cookies|lunch|dinner|breakfast|candy)\b/ },
+  { cat:"school", re:/\b(school|homework|teacher|class|test|quiz|recess)\b/ },
+  { cat:"play", re:/\b(play|game|games|toy|toys|park|outside|swim|bike|ball|playground)\b/ },
+  { cat:"animal", re:/\b(dog|puppy|cat|kitten|animal|pet)\b/ },
+  { cat:"weather", re:/\b(rain|rainy|snow|snowy|sunny|weather|hot out|cold out)\b/ },
+  { cat:"joke", re:/\b(joke|funny|lol|haha|hilarious)\b/ },
+  { cat:"greeting", re:/^\s*(hi|hey|hello|yo|sup)\b/ },
+  { cat:"yes", re:/^\s*(yes|yeah|yep|yup|sure|ok|okay)\b/ },
+  { cat:"no", re:/^\s*(no|nope|nah)\b/ },
+  { cat:"question", re:/\?|^\s*(what|why|how|when|where|who)\b/ },
+];
+
+function classifyMessage(text){
+  const lower = text.toLowerCase();
+  for (const { cat, re } of CATEGORY_PATTERNS){
+    if (re.test(lower)) return cat;
+  }
+  return "fallback";
+}
+
+function pickReply(contact, text){
+  const cat = classifyMessage(text);
+  const pool = (CHAT_REPLIES[cat] && CHAT_REPLIES[cat][contact.voice]) || CHAT_REPLIES.fallback[contact.voice];
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
+function renderTextContacts(){
+  const grid = document.getElementById("textContactGrid");
+  grid.innerHTML = "";
+  TEXT_CONTACTS.forEach(c => {
+    const btn = document.createElement("button");
+    btn.className = "contact-btn";
+    btn.innerHTML = `<span class="contact-emo">${c.emo}</span><span>${c.name}</span>`;
+    btn.addEventListener("click", () => openChat(c));
+    grid.appendChild(btn);
+  });
+}
+
+function addChatBubble(who, text){
+  const thread = document.getElementById("chatThread");
+  const bubble = document.createElement("div");
+  bubble.className = "chat-bubble " + who;
+  bubble.textContent = text;
+  thread.appendChild(bubble);
+  thread.scrollTop = thread.scrollHeight;
+  return bubble;
+}
+
+function openChat(contact){
+  currentTextContact = contact;
+  chatToken++;
+  const myToken = chatToken;
+  document.getElementById("textingList").style.display = "none";
+  document.getElementById("textingChat").style.display = "flex";
+  document.getElementById("chatHeaderEmo").textContent = contact.emo;
+  document.getElementById("chatHeaderName").textContent = contact.name;
+  document.getElementById("chatThread").innerHTML = "";
+  document.getElementById("chatInput").value = "";
+
+  const opener = contact.openers[Math.floor(Math.random() * contact.openers.length)];
+  clearTimeout(chatTypingTimeout);
+  chatTypingTimeout = setTimeout(() => {
+    if (myToken !== chatToken) return;
+    tone(700, 0, 0.12, "sine", 0.12);
+    addChatBubble("them", opener);
+  }, 500);
+  document.getElementById("chatInput").focus();
+}
+
+document.getElementById("chatBackBtn").addEventListener("click", () => {
+  chatToken++;
+  clearTimeout(chatTypingTimeout); chatTypingTimeout = null;
+  document.getElementById("textingChat").style.display = "none";
+  document.getElementById("textingList").style.display = "flex";
+});
+
+function sendChatMessage(){
+  const input = document.getElementById("chatInput");
+  const text = input.value.trim();
+  if (!text || !currentTextContact) return;
+  tone(500, 0, 0.08, "triangle", 0.12);
+  addChatBubble("me", text);
+  input.value = "";
+
+  const contact = currentTextContact;
+  chatToken++;
+  const myToken = chatToken;
+  const typingBubble = addChatBubble("them typing", "...");
+
+  clearTimeout(chatTypingTimeout);
+  chatTypingTimeout = setTimeout(() => {
+    typingBubble.remove();
+    if (myToken !== chatToken) return;
+    tone(700, 0, 0.12, "sine", 0.12);
+    addChatBubble("them", pickReply(contact, text));
+  }, 700 + Math.random() * 900);
+}
+document.getElementById("chatSendBtn").addEventListener("click", sendChatMessage);
+document.getElementById("chatInput").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") sendChatMessage();
+});
+renderTextContacts();
 
 // ---------- climate ----------
 let temp = 72, fan = 2, seatDriverLvl = 0, seatPaxLvl = 0, defrostOn = false;
