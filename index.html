@@ -1090,109 +1090,114 @@ renderContacts();
 // shown back in their own bubble (plus sometimes quoted back by the bot,
 // exactly as typed, never altered/generated) — so nothing the bot says can
 // be anything other than what we wrote here or what the kid already typed.
+// Each contact has their own personality/hobbies baked directly into their
+// lines (not just a shared tone with names swapped) so no two contacts read
+// the same way: Mom = warm/nurturing, Dad = sporty/dad-joke, Grandma =
+// baking/gardening, Grandpa = fishing/workshop, Jake = video games/sports
+// slang, Ava = art/dance/bubbly slang.
 const TEXT_CONTACTS = [
-  { name:"Mom", emo:"👩", voice:"parent",
+  { name:"Mom", emo:"👩",
     openers:["Hi honey! What are you up to? 💛","Hey sweetie! How's your day going?","Hi! Just checking in on you 😊"] },
-  { name:"Dad", emo:"👨", voice:"parent",
+  { name:"Dad", emo:"👨",
     openers:["Hey buddy! What's up?","Hi! How's it going today?","Hey! Anything fun happening?"] },
-  { name:"Grandma", emo:"👵", voice:"grandparent",
+  { name:"Grandma", emo:"👵",
     openers:["Hello dear! I was just thinking about you 💕","Hi sweetheart! How are you today?","Hello! I baked cookies today 🍪"] },
-  { name:"Grandpa", emo:"👴", voice:"grandparent",
+  { name:"Grandpa", emo:"👴",
     openers:["Hiya! What are you up to today?","Hey there! How's my favorite grandkid?","Hello! Catch any good stories lately?"] },
-  { name:"Jake", emo:"👦", voice:"friend",
+  { name:"Jake", emo:"👦",
     openers:["yo!! whats up 😎","hey hey! you around?","heyyy what are you doing"] },
-  { name:"Ava", emo:"👧", voice:"friend",
+  { name:"Ava", emo:"👧",
     openers:["hii!! 🌸 whatcha doing","hey! guess what happened today","hi!! miss u, whats new"] },
 ];
 
 const CHAT_REPLIES = {
   bye: {
     Mom: ["Okay sweetie, love you! Bye!","Bye honey, talk to you soon!"],
-    Dad: ["Later buddy! Catch you soon.","Alright, see ya! Have a good one."],
-    Grandma: ["Bye bye dear, love you lots! 💕","Goodbye sweetheart, come visit soon!"],
-    Grandpa: ["Take care, kiddo! Talk soon.","Alright, see ya later, champ!"],
-    Jake: ["byeee!! 👋","cya later dude!!"],
-    Ava: ["bye bye!! 🌸","byeee, talk soon!! 💕"],
+    Dad: ["Later buddy! Catch you soon.","Alright champ, catch ya on the flip side!"],
+    Grandma: ["Bye bye dear, love you lots! 💕","Goodbye sweetheart, I'll save you some cookies!"],
+    Grandpa: ["Take care, kiddo! Talk soon.","Alright champ, I'm off to the workshop. Bye!"],
+    Jake: ["byeee!! 👋","gtg my game's starting, bye!!"],
+    Ava: ["bye bye!! 🌸","byeee, gonna go draw now!! 💕"],
   },
   love: {
     Mom: ["I love you too, so so much! 💛","Aww, love you more, sweetie!"],
-    Dad: ["Love you too, buddy! 😄","Love you too, champ!"],
+    Dad: ["Love you too, buddy! 😄","Love you too, champ, big time."],
     Grandma: ["I love you too, sweetheart, more than anything! 💕","Oh my heart, love you dearly, dear!"],
     Grandpa: ["Love you too, kiddo!","Right back at ya, champ! Love you."],
     Jake: ["aww love u too dude!! 💛","haha love u too man"],
-    Ava: ["awww love u too!! 💛","yesss love u so much!! 🌸"],
+    Ava: ["awww love u too!! 💛","yesss ur the best bestie 🌸"],
   },
   sad: {
     Mom: ["Aw, I'm sorry sweetie. I'm here for you. 💛","That's tough, but I love you and it'll be okay."],
-    Dad: ["Aw man, that's rough buddy. I'm here for you.","Sorry to hear that, champ. We'll figure it out."],
+    Dad: ["Aw man, that's rough buddy. I'm here for you.","Sorry to hear that, champ. We'll figure it out together."],
     Grandma: ["Oh sweetheart, I'm sorry. Sending a big hug. 🤗","That sounds hard, dear. I love you very much."],
     Grandpa: ["Aw, that's no good, kiddo. Hang in there.","Sorry to hear that, champ. I'm here if you need me."],
-    Jake: ["aw im sorry dude :( that stinks","thats no good, u ok?"],
-    Ava: ["aww im so sorry :( sending hugs 💕","thats no good, im here if u need to talk"],
+    Jake: ["aw im sorry dude :( that stinks","thats no good, u ok? here if u need to talk"],
+    Ava: ["aww im so sorry :( sending hugs 💕","thats no good, im always here for u"],
   },
   excited: {
     Mom: ["I'm so happy for you, sweetie!","Yay! I love your excitement!"],
-    Dad: ["That's awesome, buddy! Way to go!","Heck yeah, champ! Love it."],
+    Dad: ["That's awesome, buddy! High five! 🙌","Heck yeah, champ! Love it."],
     Grandma: ["Oh how exciting, dear!","That's just wonderful news, sweetheart!"],
     Grandpa: ["Well how about that, kiddo! Great news.","Ha, that's the spirit, champ!"],
-    Jake: ["omgggg yes dude!!","thats so awesome!!"],
-    Ava: ["omggg yay!! 🎉","thats amazing!! so happy for u"],
+    Jake: ["omgggg yes dude, epic!!","thats so awesome, gg!!"],
+    Ava: ["omggg yay!! 🎉","thats amazing!! so happy for u bestie"],
   },
   howareyou: {
     Mom: ["I'm doing great, thanks for asking! How about you?","I'm good, sweetie! Tell me about your day."],
-    Dad: ["Doing good, buddy! You?","Pretty good, champ! What's new with you?"],
-    Grandma: ["Oh I'm just wonderful, dear, thank you for asking!","Can't complain! How's my favorite grandkid doing?"],
-    Grandpa: ["Doing just fine, kiddo! How about you?","Can't complain! What's new, champ?"],
-    Jake: ["good good! u?","pretty good!! whatcha doing"],
-    Ava: ["im great!! u?? 🌸","so good!! whats new with u"],
+    Dad: ["Doing good, buddy, just got back from a run. You?","Pretty good, champ! What's new with you?"],
+    Grandma: ["Oh I'm just wonderful, dear, I was out in the garden!","Can't complain! How's my favorite grandkid doing?"],
+    Grandpa: ["Doing just fine, kiddo, just fixed up the shed. You?","Can't complain! What's new, champ?"],
+    Jake: ["good good! just playing a game, u?","pretty good!! whatcha doing"],
+    Ava: ["im great!! just drawing, u?? 🌸","so good!! whats new with u"],
   },
   food: {
-    Mom: ["Ooh yum! Want me to make your favorite snack?","Are you hungry? I can whip something up!"],
-    Dad: ["Sounds tasty, buddy! We should grill something later.","Ooh nice, champ, I could go for that too!"],
-    Grandma: ["Oh I just baked cookies, come get some! 🍪","I'll make your favorite treat next time you visit!"],
-    Grandpa: ["Sounds good, kiddo! I could go for a snack myself.","Ha, me too, champ! Let's grab something later."],
-    Jake: ["lol same im starving","ooh can we get ice cream later"],
-    Ava: ["omg yesss food 🍕","ooh i want some too!! 🌸"],
+    Mom: ["Ooh yum! Want me to make your favorite snack?","Are you hungry? I can whip something up!","I've got fruit and crackers ready for when you get home."],
+    Dad: ["Sounds tasty, buddy! We should grill something later.","Ooh nice, champ, I could go for that too!","Let's fire up the grill this weekend, buddy."],
+    Grandma: ["Oh I just baked cookies, come get some! 🍪","I'll make your favorite treat next time you visit!","I've got a pie in the oven, come smell it, dear!"],
+    Grandpa: ["Sounds good, kiddo! I could go for a snack myself.","Ha, me too, champ! Let's grab something later.","I just caught some fish, we should fry it up!"],
+    Jake: ["lol same im starving","ooh can we get ice cream later","bro i could eat, wanna game and snack after?"],
+    Ava: ["omg yesss food 🍕","ooh i want some too!! 🌸","lets get snacks and draw together later!!"],
   },
   school: {
-    Mom: ["How did that go? I want to hear all about it!","You're working so hard, I'm proud of you!"],
-    Dad: ["You've got this, buddy! Let me know if you need help.","Nice work, champ! Keep it up."],
-    Grandma: ["School was so different in my day, tell me about yours!","You're such a smart cookie, dear!"],
-    Grandpa: ["Back in my day school was a whole different story, kiddo!","I'm sure you're doing great, champ!"],
-    Jake: ["ugh school is so boring lol","did u finish the homework yet"],
-    Ava: ["omg same, school is a lot lol","did u finish urs yet?? 🌸"],
+    Mom: ["How did that go? I want to hear all about it!","You're working so hard, I'm proud of you!","Let me know if you need help with homework tonight."],
+    Dad: ["You've got this, buddy! Let me know if you need help.","Nice work, champ! Keep it up.","School's tough sometimes, but you're crushing it, buddy."],
+    Grandma: ["School was so different in my day, tell me about yours!","You're such a smart cookie, dear!","I'll bake you something special for doing so well, dear."],
+    Grandpa: ["Back in my day school was a whole different story, kiddo!","I'm sure you're doing great, champ!","I used to build things in shop class — what's your favorite subject?"],
+    Jake: ["ugh school is so boring lol","did u finish the homework yet","lets play a game after homework, dude"],
+    Ava: ["omg same, school is a lot lol","did u finish urs yet?? 🌸","lets draw after homework, itll be fun!!"],
   },
   play: {
-    Mom: ["That sounds like so much fun! Have a blast, sweetie!","Go enjoy yourself! Be safe out there."],
-    Dad: ["Sounds fun, buddy! Wish I could join.","Have fun, champ! Don't forget your gear."],
-    Grandma: ["Oh how lovely! I used to play outside all day too.","Have fun, dear! Don't forget your jacket."],
-    Grandpa: ["Sounds like a good time, kiddo! Enjoy.","Have fun out there, champ!"],
-    Jake: ["lets play later!! im down","omg yes lets go to the park"],
-    Ava: ["omg yes lets go!! 🌸","sounds so fun, im in!!"],
+    Mom: ["That sounds like so much fun! Have a blast, sweetie!","Go enjoy yourself! Be safe out there.","Have fun, and text me if you need anything!"],
+    Dad: ["Sounds fun, buddy! Wish I could join.","Have fun, champ! Don't forget your gear.","Let's toss the ball around later too, buddy."],
+    Grandma: ["Oh how lovely! I used to play outside all day too.","Have fun, dear! Don't forget your jacket.","I'll be in the garden if you want to visit after."],
+    Grandpa: ["Sounds like a good time, kiddo! Enjoy.","Have fun out there, champ!","Come by the workshop after, I'll show you a new tool."],
+    Jake: ["lets play later!! im down","omg yes lets go to the park","wanna play video games instead, dude?"],
+    Ava: ["omg yes lets go!! 🌸","sounds so fun, im in!!","can we draw or dance after?? 💃"],
   },
   animal: {
     Mom: ["Aww, animals are the best! 🐾","That's so sweet, sweetie!"],
     Dad: ["Nice, buddy! Animals are pretty cool.","Ha, love that, champ!"],
     Grandma: ["Oh I do love animals, dear!","How precious! We had a dog when I was your age."],
-    Grandpa: ["We had all sorts of critters on the farm, kiddo!","Ha, love a good animal story, champ!"],
-    Jake: ["omg so cute 🐶","aww i want a pet too"],
-    Ava: ["omg so cute!! 🐾🌸","aww i love animals so much"],
+    Grandpa: ["We had all sorts of critters on the farm, kiddo!","Ha, love a good animal story, champ — I once caught a huge fish too!"],
+    Jake: ["omg so cute 🐶","aww i want a pet too, i'd play games with it all day"],
+    Ava: ["omg so cute!! 🐾🌸","aww i love animals so much, i'd draw them all day"],
   },
   weather: {
     Mom: ["Make sure to dress for the weather, sweetie!","That sounds like a nice day for it!"],
     Dad: ["Good call, buddy, dress warm out there.","Nice, champ, perfect day for it."],
-    Grandma: ["Back in my day we'd play outside no matter the weather!","Bundle up if it's chilly, dear!"],
-    Grandpa: ["Ha, I remember weather like that, kiddo!","Good day for it, champ, enjoy!"],
-    Jake: ["lol its crazy out there","perfect weather for outside stuff"],
-    Ava: ["omg its so nice out today!! 🌸","lol weather is wild lately"],
+    Grandma: ["Back in my day we'd play outside no matter the weather!","Bundle up if it's chilly, dear — I'll make hot cocoa."],
+    Grandpa: ["Ha, I remember weather like that, kiddo — good fishing weather too.","Good day for it, champ, enjoy!"],
+    Jake: ["lol its crazy out there","perfect weather for outside stuff, wanna play?"],
+    Ava: ["omg its so nice out today!! 🌸","lol weather is wild lately, good day to draw outside"],
   },
   joke: {
     Mom: ["Ha! You always make me smile, sweetie. 😄","You're so funny!"],
-    Dad: ["Ha! Good one, buddy. I've got a few myself.","Nice one, champ! Made me laugh."],
+    Dad: ["Ha! Good one, buddy. I've got a few myself.","Nice one, champ! Made me laugh out loud."],
     Grandma: ["Oh you always make me laugh, dear!","Ha ha, that's a good one, sweetheart!"],
-    Grandpa: ["Ha, that's a good one, kiddo! Reminds me of one I know.","Ha ha, good one, champ!"],
-    Jake: ["lolllll","hahaha thats so funny dude"],
-    Ava: ["hahaha omg dying 😂","lolll thats so funny"],
+    Grandpa: ["Ha, that's a good one, kiddo! Reminds me of one from the shop.","Ha ha, good one, champ!"],
+    Jake: ["lolllll","hahaha thats so funny dude, gg"],
+    Ava: ["hahaha omg dying 😂","lolll thats so funny bestie"],
   },
   question: {
     Mom: ["Good question! What do you think, sweetie?","Hmm, let's figure that out together when I see you!"],
@@ -1219,31 +1224,35 @@ const CHAT_REPLIES = {
     Ava: ["aw ok no worries!! 🌸","thats okay!!"],
   },
   greeting: {
-    Mom: ["Hi sweetie! 😊","Hey there, honey!"],
-    Dad: ["Hey buddy!","What's up, champ!"],
-    Grandma: ["Hello dear! 💕","Hi sweetheart!"],
-    Grandpa: ["Hiya kiddo!","Well hello there, champ!"],
-    Jake: ["heyyy dude 😎","yooo whats good"],
-    Ava: ["hii!! 🌸","heyyy whats up"],
+    Mom: ["Hi sweetie! 😊","Hey there, honey!","Hi! I was just thinking of you."],
+    Dad: ["Hey buddy!","What's up, champ!","Hey hey, buddy! What's going on?"],
+    Grandma: ["Hello dear! 💕","Hi sweetheart!","Hello, hello! So good to hear from you."],
+    Grandpa: ["Hiya kiddo!","Well hello there, champ!","Howdy, kiddo! What's happening?"],
+    Jake: ["heyyy dude 😎","yooo whats good","sup!!"],
+    Ava: ["hii!! 🌸","heyyy whats up","hiii bestie!!"],
   },
   fallback: {
-    Mom: ["That's interesting, tell me more, sweetie!","Oh really? I want to hear more about that!"],
-    Dad: ["Oh nice, buddy, tell me more.","Interesting, champ! What happened next?"],
-    Grandma: ["Oh how nice, dear! Tell me more about that.","Is that so! I'd love to hear more."],
-    Grandpa: ["Well now, tell me more about that, kiddo.","Is that right, champ? Go on."],
-    Jake: ["lol cool, tell me more","oh nice!! whats the story"],
-    Ava: ["omg tell me more!!","wait really?? spill the details!!"],
+    Mom: ["That's interesting, tell me more, sweetie!","Oh really? I want to hear more about that!","Aw, tell me everything when you get home!"],
+    Dad: ["Oh nice, buddy, tell me more.","Interesting, champ! What happened next?","Ha, no way, buddy — go on."],
+    Grandma: ["Oh how nice, dear! Tell me more about that.","Is that so! I'd love to hear more.","Well isn't that something, dear! Go on."],
+    Grandpa: ["Well now, tell me more about that, kiddo.","Is that right, champ? Go on.","Ha, you don't say, kiddo! Tell me more."],
+    Jake: ["lol cool, tell me more","oh nice!! whats the story","wait fr? tell me more dude"],
+    Ava: ["omg tell me more!!","wait really?? spill the details!!","omg no way, tell me everything bestie!!"],
   },
 };
 
 // Sometimes quote the kid's own message back instead of a canned line, so
 // the bot feels like it's actually listening rather than picking from a
 // fixed list every time. Only ever quotes what the kid already typed and
-// already sees in their own bubble — never generates new text.
+// already sees in their own bubble — never generates new text. Templates
+// are per-contact (not shared) for the same reason CHAT_REPLIES is.
 const ECHO_TEMPLATES = {
-  parent: ['Oh, "{text}"? Tell me more!','Wait, "{text}"? That\'s neat!','Oh interesting — "{text}"? Go on!'],
-  grandparent: ['Oh my, "{text}"? Tell me more, dear!','Is that so — "{text}"? I\'d love to hear more!'],
-  friend: ['wait, "{text}"?? tell me more','omg "{text}"? no way, more details!!'],
+  Mom: ['Oh, "{text}"? Tell me more, sweetie!','Wait, "{text}"? That\'s neat, honey!','Oh interesting — "{text}"? Go on!'],
+  Dad: ['Oh, "{text}"? Tell me more, buddy!','Wait, "{text}"? Nice one, champ!','Oh really — "{text}"? Go on, buddy!'],
+  Grandma: ['Oh my, "{text}"? Tell me more, dear!','Is that so — "{text}"? I\'d love to hear more, sweetheart!','Well now, "{text}"? Go on, dear!'],
+  Grandpa: ['Oh my, "{text}"? Tell me more, kiddo!','Is that so — "{text}"? Go on, champ!','Well now, "{text}"? Tell me more, kiddo!'],
+  Jake: ['wait, "{text}"?? tell me more dude','omg "{text}"? no way, more details!!','fr, "{text}"?? tell me more'],
+  Ava: ['wait, "{text}"?? tell me more bestie','omg "{text}"? no way, spill the details!!','omggg "{text}"?? tell me everything!!'],
 };
 
 const CATEGORY_PATTERNS = [
@@ -1275,7 +1284,7 @@ function classifyMessage(text){
 function pickReply(contact, text){
   const cat = classifyMessage(text);
   if (cat !== "bye" && Math.random() < 0.3){
-    const templates = ECHO_TEMPLATES[contact.voice];
+    const templates = ECHO_TEMPLATES[contact.name];
     const template = templates[Math.floor(Math.random() * templates.length)];
     return template.replace("{text}", text.length > 40 ? text.slice(0, 40) + "…" : text);
   }
