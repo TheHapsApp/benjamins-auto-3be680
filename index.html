@@ -1433,21 +1433,29 @@ function maybeUpdateGroupPresence(contact){
 // Returns an array of { who, text } — one entry for a 1:1 chat ("who" is
 // "them"), or however many the group chat's currently-present members
 // generate (see maybeUpdateGroupPresence — an absent member won't reply).
+// text === null means "spontaneous": no new message from Ben, just letting
+// present group members continue the conversation with each other on their
+// own (used by the ambient background timer below). Only meaningful for a
+// group with 2+ currently-present members and some existing history.
 async function getBotReplies(contact, priorHistory, text){
+  const spontaneous = text === null;
   const participants = contact.isGroup
     ? contact.members.filter(name => !leftMembersFor(contact).has(name))
     : [contact.name];
   if (participants.length === 0) return [];
+  if (spontaneous && (participants.length < 2 || priorHistory.length === 0)) return [];
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000);
+    const body = { participants, history: priorHistory.slice(-16) };
+    if (spontaneous) body.spontaneous = true; else body.message = text;
     const resp = await fetch(CHAT_FUNCTION_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "Authorization": "Bearer " + SUPABASE_ANON_KEY,
       },
-      body: JSON.stringify({ participants, history: priorHistory.slice(-16), message: text }),
+      body: JSON.stringify(body),
       signal: controller.signal,
     });
     clearTimeout(timeoutId);
@@ -1459,7 +1467,8 @@ async function getBotReplies(contact, priorHistory, text){
     }
     throw new Error("empty replies");
   } catch (err){
-    console.warn("AI chat unavailable, using local fallback:", err);
+    console.warn("AI chat unavailable" + (spontaneous ? " (ambient, skipping)" : ", using local fallback") + ":", err);
+    if (spontaneous) return []; // no canned content for spontaneous chatter — just skip quietly, non-critical
     return participants.map(name => {
       const memberContact = contact.isGroup ? (TEXT_CONTACTS.find(c => c.name === name) || { name }) : contact;
       return { who: contact.isGroup ? name : "them", text: pickReply(memberContact, text) };
@@ -1639,6 +1648,36 @@ document.getElementById("chatInput").addEventListener("keydown", (e) => {
   if (e.key === "Enter") sendChatMessage();
 });
 renderTextContacts();
+
+// Lets Jake and Ava keep texting each other even while Ben is on a
+// different screen (not just when the group chat is actually open) — a
+// periodic background check, same style as the Phone app's incoming-call
+// scheduling. Only fires if Ben has opened the group chat at least once
+// this session (there's history to continue from) and routes through the
+// same replyChains ordering used for double-texting, so it never collides
+// with a reply Ben's own message is still waiting on. This only runs while
+// this browser tab is open — a fully closed app can't run anything, static
+// site with no persistent server.
+let ambientGroupChatTimer = null;
+function scheduleAmbientGroupChat(){
+  clearTimeout(ambientGroupChatTimer);
+  ambientGroupChatTimer = setTimeout(triggerAmbientGroupChat, 60000 + Math.random() * 90000);
+}
+async function triggerAmbientGroupChat(){
+  const groupContact = TEXT_CONTACTS.find(c => c.isGroup);
+  if (groupContact && Math.random() < 0.5){
+    const history = getHistoryFor(groupContact);
+    if (history.length > 0){
+      const priorHistory = history.slice();
+      const prevChain = replyChains[groupContact.name] || Promise.resolve();
+      const nextChain = prevChain.catch(() => {}).then(() => renderReplyFor(groupContact, priorHistory, null));
+      replyChains[groupContact.name] = nextChain;
+      await nextChain;
+    }
+  }
+  scheduleAmbientGroupChat();
+}
+scheduleAmbientGroupChat();
 
 // ---------- climate ----------
 let temp = 72, fan = 2, seatDriverLvl = 0, seatPaxLvl = 0, defrostOn = false;
