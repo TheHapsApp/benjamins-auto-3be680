@@ -507,6 +507,7 @@ function resetAppStates(){
   clearTimeout(chatTypingTimeout); chatTypingTimeout = null;
   chatToken++;
   currentTextContact = null;
+  chatHistory = [];
   document.getElementById("textingList").style.display = "flex";
   document.getElementById("textingChat").style.display = "none";
   document.getElementById("chatThread").innerHTML = "";
@@ -1327,8 +1328,46 @@ function addChatBubble(who, text){
   return bubble;
 }
 
+// ---------- texting: real AI backend (with local fallback) ----------
+// Calls a Supabase Edge Function that proxies to Gemini with a per-contact
+// kid-safe persona, so replies are genuinely open-ended instead of picked
+// from a fixed list. The API key lives server-side only — never in this
+// public static site. If the network/backend is unavailable for any reason
+// (offline, cold device, function hiccup), it falls back to the local
+// pickReply() keyword bot above so the kid always gets *some* reply.
+const SUPABASE_URL = "https://cvcnugkqdgmcntsuplaj.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN2Y251Z2txZGdtY250c3VwbGFqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA5NDEzMjksImV4cCI6MjA4NjUxNzMyOX0.2oFlTJf2E6ntWZRDQSXXIFI4AwgiBKoATIVqpjsenNY";
+const CHAT_FUNCTION_URL = SUPABASE_URL + "/functions/v1/benjamins-auto-chat";
+
+let chatHistory = [];
+
+async function getBotReply(contact, priorHistory, text){
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8000);
+    const resp = await fetch(CHAT_FUNCTION_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer " + SUPABASE_ANON_KEY,
+      },
+      body: JSON.stringify({ contact: contact.name, history: priorHistory.slice(-10), message: text }),
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+    if (!resp.ok) throw new Error("bad status " + resp.status);
+    const data = await resp.json();
+    if (typeof data.reply === "string" && data.reply.trim()) return data.reply.trim();
+    throw new Error("empty reply");
+  } catch (err){
+    console.warn("AI chat unavailable, using local fallback:", err);
+    return pickReply(contact, text);
+  }
+}
+
 function openChat(contact){
   currentTextContact = contact;
+  chatHistory = [];
   chatToken++;
   const myToken = chatToken;
   document.getElementById("textingList").style.display = "none";
@@ -1344,6 +1383,7 @@ function openChat(contact){
     if (myToken !== chatToken) return;
     tone(700, 0, 0.12, "sine", 0.12);
     addChatBubble("them", opener);
+    chatHistory.push({ who:"them", text: opener });
   }, 500);
   document.getElementById("chatInput").focus();
 }
@@ -1355,7 +1395,7 @@ document.getElementById("chatBackBtn").addEventListener("click", () => {
   document.getElementById("textingList").style.display = "flex";
 });
 
-function sendChatMessage(){
+async function sendChatMessage(){
   const input = document.getElementById("chatInput");
   const text = input.value.trim();
   if (!text || !currentTextContact) return;
@@ -1364,17 +1404,22 @@ function sendChatMessage(){
   input.value = "";
 
   const contact = currentTextContact;
+  const priorHistory = chatHistory.slice();
+  chatHistory.push({ who:"me", text });
   chatToken++;
   const myToken = chatToken;
   const typingBubble = addChatBubble("them typing", "...");
 
-  clearTimeout(chatTypingTimeout);
-  chatTypingTimeout = setTimeout(() => {
-    typingBubble.remove();
-    if (myToken !== chatToken) return;
-    tone(700, 0, 0.12, "sine", 0.12);
-    addChatBubble("them", pickReply(contact, text));
-  }, 700 + Math.random() * 900);
+  const [reply] = await Promise.all([
+    getBotReply(contact, priorHistory, text),
+    new Promise(r => setTimeout(r, 500)), // minimum typing-indicator time so instant replies don't feel jarring
+  ]);
+
+  typingBubble.remove();
+  if (myToken !== chatToken) return; // kid navigated away while we were waiting
+  tone(700, 0, 0.12, "sine", 0.12);
+  addChatBubble("them", reply);
+  chatHistory.push({ who:"them", text: reply });
 }
 document.getElementById("chatSendBtn").addEventListener("click", sendChatMessage);
 document.getElementById("chatInput").addEventListener("keydown", (e) => {
