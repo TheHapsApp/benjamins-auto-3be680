@@ -486,7 +486,7 @@ const backBtn = document.getElementById("backBtn");
 let musicInterval = null, callingTimeout = null, callTimerInterval = null;
 let scriptTimeout1 = null, scriptTimeout2 = null, scriptTimeout3 = null;
 let incomingCallTimeout = null, incomingRingInterval = null;
-let chatTypingTimeout = null, chatToken = 0, currentTextContact = null;
+let chatTypingTimeout = null, currentTextContact = null, openTextContactName = null;
 let musicPlaying = false, callSeconds = 0;
 let driveToken = 0;
 
@@ -504,14 +504,10 @@ function resetAppStates(){
   clearTimeout(scriptTimeout2); scriptTimeout2 = null;
   clearTimeout(scriptTimeout3); scriptTimeout3 = null;
   cancelIncomingCall();
-  clearTimeout(chatTypingTimeout); chatTypingTimeout = null;
-  chatToken++;
-  currentTextContact = null;
-  chatHistory = [];
-  document.getElementById("textingList").style.display = "flex";
-  document.getElementById("textingChat").style.display = "none";
-  document.getElementById("chatThread").innerHTML = "";
-  document.getElementById("chatInput").value = "";
+  // Texting state is deliberately NOT reset here — switching to another app
+  // and back should resume the in-progress conversation, not restart it.
+  // See enterTexting()/openChat() for the texting-specific reset (only when
+  // the kid explicitly backs out to the contact list via chatBackBtn).
 
   musicPlaying = false;
   document.getElementById("musicPlay").textContent = "▶️";
@@ -545,6 +541,7 @@ function showCarScreen(id){
   document.getElementById("screen-" + id).classList.add("active");
   backBtn.style.visibility = id === "home" ? "hidden" : "visible";
   if (id === "phone") scheduleIncomingCall();
+  if (id === "texting") enterTexting();
 }
 document.querySelectorAll(".car-app").forEach(b => b.addEventListener("click", () => showCarScreen(b.dataset.screen)));
 backBtn.addEventListener("click", () => showCarScreen("home"));
@@ -1339,7 +1336,15 @@ const SUPABASE_URL = "https://cvcnugkqdgmcntsuplaj.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN2Y251Z2txZGdtY250c3VwbGFqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA5NDEzMjksImV4cCI6MjA4NjUxNzMyOX0.2oFlTJf2E6ntWZRDQSXXIFI4AwgiBKoATIVqpjsenNY";
 const CHAT_FUNCTION_URL = SUPABASE_URL + "/functions/v1/benjamins-auto-chat";
 
-let chatHistory = [];
+// Conversations persist per-contact for the whole session (not reset when
+// switching to another app and back — see enterTexting()) so leaving mid-chat
+// and returning resumes exactly where it left off. Only the explicit
+// "← Contacts" button ends the currently-displayed conversation view.
+const chatHistories = {};
+function getHistoryFor(contact){
+  if (!chatHistories[contact.name]) chatHistories[contact.name] = [];
+  return chatHistories[contact.name];
+}
 
 async function getBotReply(contact, priorHistory, text){
   try {
@@ -1365,32 +1370,54 @@ async function getBotReply(contact, priorHistory, text){
   }
 }
 
-function openChat(contact){
+// Called whenever the Texting screen becomes active (tapping the Texting
+// icon from home, or switching back to it from another app) — resumes
+// whatever conversation was open, or shows the contact list if none was.
+function enterTexting(){
+  const contact = openTextContactName && TEXT_CONTACTS.find(c => c.name === openTextContactName);
+  if (contact){
+    renderChatView(contact);
+  } else {
+    currentTextContact = null;
+    document.getElementById("textingList").style.display = "flex";
+    document.getElementById("textingChat").style.display = "none";
+  }
+}
+
+function renderChatView(contact){
   currentTextContact = contact;
-  chatHistory = [];
-  chatToken++;
-  const myToken = chatToken;
   document.getElementById("textingList").style.display = "none";
   document.getElementById("textingChat").style.display = "flex";
   document.getElementById("chatHeaderEmo").textContent = contact.emo;
   document.getElementById("chatHeaderName").textContent = contact.name;
-  document.getElementById("chatThread").innerHTML = "";
+  const thread = document.getElementById("chatThread");
+  thread.innerHTML = "";
+  getHistoryFor(contact).forEach(h => addChatBubble(h.who, h.text));
+  document.getElementById("chatInput").focus();
+}
+
+function openChat(contact){
+  openTextContactName = contact.name;
+  renderChatView(contact);
   document.getElementById("chatInput").value = "";
+
+  const history = getHistoryFor(contact);
+  if (history.length > 0) return; // resuming an existing conversation — no opener needed
 
   const opener = contact.openers[Math.floor(Math.random() * contact.openers.length)];
   clearTimeout(chatTypingTimeout);
   chatTypingTimeout = setTimeout(() => {
-    if (myToken !== chatToken) return;
+    if (currentTextContact !== contact) return; // kid picked a different contact before this fired
     tone(700, 0, 0.12, "sine", 0.12);
     addChatBubble("them", opener);
-    chatHistory.push({ who:"them", text: opener });
+    history.push({ who:"them", text: opener });
   }, 500);
-  document.getElementById("chatInput").focus();
 }
 
 document.getElementById("chatBackBtn").addEventListener("click", () => {
-  chatToken++;
   clearTimeout(chatTypingTimeout); chatTypingTimeout = null;
+  openTextContactName = null;
+  currentTextContact = null;
   document.getElementById("textingChat").style.display = "none";
   document.getElementById("textingList").style.display = "flex";
 });
@@ -1404,10 +1431,9 @@ async function sendChatMessage(){
   input.value = "";
 
   const contact = currentTextContact;
-  const priorHistory = chatHistory.slice();
-  chatHistory.push({ who:"me", text });
-  chatToken++;
-  const myToken = chatToken;
+  const history = getHistoryFor(contact);
+  const priorHistory = history.slice();
+  history.push({ who:"me", text });
   const typingBubble = addChatBubble("them typing", "...");
 
   const [reply] = await Promise.all([
@@ -1415,11 +1441,20 @@ async function sendChatMessage(){
     new Promise(r => setTimeout(r, 500)), // minimum typing-indicator time so instant replies don't feel jarring
   ]);
 
-  typingBubble.remove();
-  if (myToken !== chatToken) return; // kid navigated away while we were waiting
-  tone(700, 0, 0.12, "sine", 0.12);
-  addChatBubble("them", reply);
-  chatHistory.push({ who:"them", text: reply });
+  history.push({ who:"them", text: reply });
+
+  // Only touch the DOM if this exact conversation is still the one on screen
+  // (the kid may have switched apps, or picked a different contact, while
+  // the reply was in flight) — the history push above still happened either
+  // way, so it'll show correctly next time they open this contact.
+  const stillViewingThisChat = currentTextContact === contact &&
+    document.getElementById("textingChat").style.display === "flex" &&
+    document.getElementById("screen-texting").classList.contains("active");
+  if (stillViewingThisChat){
+    typingBubble.remove();
+    tone(700, 0, 0.12, "sine", 0.12);
+    addChatBubble("them", reply);
+  }
 }
 document.getElementById("chatSendBtn").addEventListener("click", sendChatMessage);
 document.getElementById("chatInput").addEventListener("keydown", (e) => {
