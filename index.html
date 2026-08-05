@@ -214,6 +214,7 @@
   .chat-bubble.them{align-self:flex-start; background:rgba(255,255,255,0.15); color:#e5e7eb; border-bottom-left-radius:4px;}
   .chat-bubble.me{align-self:flex-end; background:#9333ea; color:#fff; border-bottom-right-radius:4px;}
   .chat-bubble.typing{opacity:0.6; font-style:italic;}
+  .chat-sender-label{font-size:0.68rem; font-weight:bold; opacity:0.75; margin-bottom:2px;}
   .chat-input-row{display:flex; gap:8px; padding-top:8px; flex-shrink:0;}
   .chat-input{
     flex:1; min-width:0; border:none; border-radius:999px; padding:9px 14px; font-size:0.85rem;
@@ -418,7 +419,7 @@
         </div>
         <div class="chat-thread" id="chatThread"></div>
         <div class="chat-input-row">
-          <input type="text" class="chat-input" id="chatInput" placeholder="Type a message..." autocomplete="off" maxlength="80">
+          <input type="text" class="chat-input" id="chatInput" placeholder="Type a message..." autocomplete="off" maxlength="300">
           <button class="chat-send-btn" id="chatSendBtn">➤</button>
         </div>
       </div>
@@ -1106,6 +1107,12 @@ const TEXT_CONTACTS = [
     openers:["yo!! whats up 😎","hey hey! you around?","heyyy what are you doing"] },
   { name:"Ava", emo:"👧",
     openers:["hii!! 🌸 whatcha doing","hey! guess what happened today","hi!! miss u, whats new"] },
+  { name:"Jake & Ava", emo:"👦👧", isGroup:true, members:["Jake","Ava"],
+    openerExchanges: [
+      [{ who:"Jake", text:"yooo we're all in the group chat now!! 😎" }, { who:"Ava", text:"yayyy this is gonna be so fun!! 🌸" }],
+      [{ who:"Ava", text:"omg group chat!! hii besties!! 🌸" }, { who:"Jake", text:"yoo whats up dude 😎" }],
+      [{ who:"Jake", text:"yo we're all here now, whats the plan" }, { who:"Ava", text:"ooh i have so many ideas!! 🎉" }],
+    ] },
 ];
 
 const CHAT_REPLIES = {
@@ -1315,11 +1322,33 @@ function renderTextContacts(){
   });
 }
 
-function addChatBubble(who, text){
+// sender is "me" or the specific speaker: "them" for a regular 1:1 chat, or
+// an exact member name ("Jake"/"Ava") in a group chat — the group case also
+// gets a small name label above the bubble so it's clear who's talking.
+function addChatBubble(sender, text){
   const thread = document.getElementById("chatThread");
   const bubble = document.createElement("div");
-  bubble.className = "chat-bubble " + who;
-  bubble.textContent = text;
+  const cls = sender === "me" ? "me" : "them";
+  bubble.className = "chat-bubble " + cls;
+  if (cls === "them" && sender !== "them" && currentTextContact && currentTextContact.isGroup){
+    const label = document.createElement("div");
+    label.className = "chat-sender-label";
+    label.textContent = sender;
+    bubble.appendChild(label);
+  }
+  const textEl = document.createElement("div");
+  textEl.textContent = text;
+  bubble.appendChild(textEl);
+  thread.appendChild(bubble);
+  thread.scrollTop = thread.scrollHeight;
+  return bubble;
+}
+
+function addTypingBubble(){
+  const thread = document.getElementById("chatThread");
+  const bubble = document.createElement("div");
+  bubble.className = "chat-bubble them typing";
+  bubble.textContent = "...";
   thread.appendChild(bubble);
   thread.scrollTop = thread.scrollHeight;
   return bubble;
@@ -1346,27 +1375,37 @@ function getHistoryFor(contact){
   return chatHistories[contact.name];
 }
 
-async function getBotReply(contact, priorHistory, text){
+// Returns an array of { who, text } — one entry for a 1:1 chat ("who" is
+// "them"), or 1-2 entries for the group chat ("who" is the exact member name,
+// e.g. "Jake"), since not everyone always chimes in on every message.
+async function getBotReplies(contact, priorHistory, text){
+  const participants = contact.isGroup ? contact.members : [contact.name];
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 8000);
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
     const resp = await fetch(CHAT_FUNCTION_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "Authorization": "Bearer " + SUPABASE_ANON_KEY,
       },
-      body: JSON.stringify({ contact: contact.name, history: priorHistory.slice(-10), message: text }),
+      body: JSON.stringify({ participants, history: priorHistory.slice(-16), message: text }),
       signal: controller.signal,
     });
     clearTimeout(timeoutId);
     if (!resp.ok) throw new Error("bad status " + resp.status);
     const data = await resp.json();
-    if (typeof data.reply === "string" && data.reply.trim()) return data.reply.trim();
-    throw new Error("empty reply");
+    if (Array.isArray(data.replies) && data.replies.length &&
+        data.replies.every(r => r && typeof r.text === "string" && r.text.trim())){
+      return data.replies.map(r => ({ who: contact.isGroup ? r.who : "them", text: r.text.trim() }));
+    }
+    throw new Error("empty replies");
   } catch (err){
     console.warn("AI chat unavailable, using local fallback:", err);
-    return pickReply(contact, text);
+    return participants.map(name => {
+      const memberContact = contact.isGroup ? (TEXT_CONTACTS.find(c => c.name === name) || { name }) : contact;
+      return { who: contact.isGroup ? name : "them", text: pickReply(memberContact, text) };
+    });
   }
 }
 
@@ -1404,8 +1443,23 @@ function openChat(contact){
   const history = getHistoryFor(contact);
   if (history.length > 0) return; // resuming an existing conversation — no opener needed
 
-  const opener = contact.openers[Math.floor(Math.random() * contact.openers.length)];
   clearTimeout(chatTypingTimeout);
+  if (contact.isGroup){
+    const exchange = contact.openerExchanges[Math.floor(Math.random() * contact.openerExchanges.length)];
+    let delay = 500;
+    exchange.forEach(line => {
+      chatTypingTimeout = setTimeout(() => {
+        if (currentTextContact !== contact) return; // kid left before this line fired
+        tone(700, 0, 0.12, "sine", 0.12);
+        addChatBubble(line.who, line.text);
+        history.push({ who: line.who, text: line.text });
+      }, delay);
+      delay += 650;
+    });
+    return;
+  }
+
+  const opener = contact.openers[Math.floor(Math.random() * contact.openers.length)];
   chatTypingTimeout = setTimeout(() => {
     if (currentTextContact !== contact) return; // kid picked a different contact before this fired
     tone(700, 0, 0.12, "sine", 0.12);
@@ -1434,26 +1488,32 @@ async function sendChatMessage(){
   const history = getHistoryFor(contact);
   const priorHistory = history.slice();
   history.push({ who:"me", text });
-  const typingBubble = addChatBubble("them typing", "...");
+  const typingBubble = addTypingBubble();
 
-  const [reply] = await Promise.all([
-    getBotReply(contact, priorHistory, text),
+  const [replies] = await Promise.all([
+    getBotReplies(contact, priorHistory, text),
     new Promise(r => setTimeout(r, 500)), // minimum typing-indicator time so instant replies don't feel jarring
   ]);
 
-  history.push({ who:"them", text: reply });
+  replies.forEach(r => history.push({ who: r.who, text: r.text }));
 
   // Only touch the DOM if this exact conversation is still the one on screen
   // (the kid may have switched apps, or picked a different contact, while
   // the reply was in flight) — the history push above still happened either
   // way, so it'll show correctly next time they open this contact.
-  const stillViewingThisChat = currentTextContact === contact &&
+  const stillViewingThisChat = () => currentTextContact === contact &&
     document.getElementById("textingChat").style.display === "flex" &&
     document.getElementById("screen-texting").classList.contains("active");
-  if (stillViewingThisChat){
-    typingBubble.remove();
+  if (!stillViewingThisChat()) return;
+
+  typingBubble.remove();
+  for (let i = 0; i < replies.length; i++){
+    if (i > 0){
+      await new Promise(r => setTimeout(r, 500 + Math.random() * 500));
+      if (!stillViewingThisChat()) return;
+    }
     tone(700, 0, 0.12, "sine", 0.12);
-    addChatBubble("them", reply);
+    addChatBubble(replies[i].who, replies[i].text);
   }
 }
 document.getElementById("chatSendBtn").addEventListener("click", sendChatMessage);
