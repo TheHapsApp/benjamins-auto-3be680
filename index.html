@@ -1273,10 +1273,23 @@ const CATEGORY_PATTERNS = [
   { cat:"question", re:/\?|^\s*(what|why|how|when|where|who)\b/ },
 ];
 
+// Categories below assume the kid is saying something positive about that
+// topic ("I'm hungry", "let's play"). If the message also has a negation
+// word in it ("I'm NOT hungry", "I don't want to play"), matching the topic
+// keyword alone gives a cheerful reply to the opposite of what was said —
+// the "starts talking about something totally different" bug. Negated
+// messages in these categories fall through to the neutral fallback bank
+// instead, which never assumes a mood either way.
+const NEGATION_GUARDED = new Set(["love","sad","excited","food","school","play","animal","weather","joke"]);
+const NEGATION_RE = /\b(not|isn['’]?t|wasn['’]?t|aren['’]?t|don['’]?t|dont|didn['’]?t|can['’]?t|cant|won['’]?t|wont|never)\b/;
+
 function classifyMessage(text){
   const lower = text.toLowerCase();
   for (const { cat, re } of CATEGORY_PATTERNS){
-    if (re.test(lower)) return cat;
+    if (re.test(lower)){
+      if (NEGATION_GUARDED.has(cat) && NEGATION_RE.test(lower)) return "fallback";
+      return cat;
+    }
   }
   return "fallback";
 }
