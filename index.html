@@ -945,6 +945,7 @@ const CONTACTS = [
   { name:"Grandpa", emo:"👴", openers:["Hiya kiddo! What's up?","Hey there, champ! Good to hear from you!","Hello! What's on your mind?"] },
   { name:"Jake", emo:"👦", openers:["yo!! whats up","hey dude, whats going on","heyyy whats up man"] },
   { name:"Ava", emo:"👧", openers:["hii!! whats up 🌸","hey bestie!! whats going on","omg hii, whats new"] },
+  { name:"Beau", emo:"👦🏽", openers:["yo!! whats good","hey bro, whats up","heyyy man, whats going on"] },
 ];
 function formatTime(s){
   const m = Math.floor(s / 60);
@@ -1218,7 +1219,8 @@ renderContacts();
 // lines (not just a shared tone with names swapped) so no two contacts read
 // the same way: Mom = warm/nurturing, Dad = sporty/dad-joke, Grandma =
 // baking/gardening, Grandpa = fishing/workshop, Jake = video games/sports
-// slang, Ava = art/dance/bubbly slang.
+// slang, Ava = art/dance/bubbly slang, Beau = Legos/video games, laid-back
+// "bro" slang.
 const TEXT_CONTACTS = [
   { name:"Mom", emo:"👩",
     openers:["Hi honey! What are you up to? 💛","Hey sweetie! How's your day going?","Hi! Just checking in on you 😊"] },
@@ -1228,11 +1230,11 @@ const TEXT_CONTACTS = [
     openers:["Hello dear! I was just thinking about you 💕","Hi sweetheart! How are you today?","Hello! I baked cookies today 🍪"] },
   { name:"Grandpa", emo:"👴",
     openers:["Hiya! What are you up to today?","Hey there! How's my favorite grandkid?","Hello! Catch any good stories lately?"] },
-  { name:"Jake & Ava", emo:"👦👧", isGroup:true, members:["Jake","Ava"],
+  { name:"Jake, Ava & Beau", emo:"👦👧👦🏽", isGroup:true, members:["Jake","Ava","Beau"],
     openerExchanges: [
-      [{ who:"Jake", text:"yooo we're all in the group chat now!! 😎" }, { who:"Ava", text:"yayyy this is gonna be so fun!! 🌸" }],
-      [{ who:"Ava", text:"omg group chat!! hii besties!! 🌸" }, { who:"Jake", text:"yoo whats up dude 😎" }],
-      [{ who:"Jake", text:"yo we're all here now, whats the plan" }, { who:"Ava", text:"ooh i have so many ideas!! 🎉" }],
+      [{ who:"Jake", text:"yooo we're all in the group chat now!! 😎" }, { who:"Ava", text:"yayyy this is gonna be so fun!! 🌸" }, { who:"Beau", text:"lets go, this is gonna be awesome bro 🧱" }],
+      [{ who:"Beau", text:"yo group chat, whats good" }, { who:"Ava", text:"omg hii besties!! 🌸" }, { who:"Jake", text:"yoo whats up dude 😎" }],
+      [{ who:"Jake", text:"yo we're all here now, whats the plan" }, { who:"Beau", text:"i say we build something epic later" }, { who:"Ava", text:"ooh i have so many ideas too!! 🎉" }],
     ] },
 ];
 
@@ -1244,6 +1246,7 @@ const CHAT_REPLIES = {
     Grandpa: ["Take care, kiddo! Talk soon.","Alright champ, I'm off to the workshop. Bye!"],
     Jake: ["byeee!! 👋","gtg my game's starting, bye!!"],
     Ava: ["bye bye!! 🌸","byeee, gonna go draw now!! 💕"],
+    Beau: ["bye bro!! gotta go build something 🧱","cya, gonna go game for a bit, bye!!"],
   },
   love: {
     Mom: ["I love you too, so so much! 💛","Aww, love you more, sweetie!"],
@@ -1252,6 +1255,7 @@ const CHAT_REPLIES = {
     Grandpa: ["Love you too, kiddo!","Right back at ya, champ! Love you."],
     Jake: ["aww love u too dude!! 💛","haha love u too man"],
     Ava: ["awww love u too!! 💛","yesss ur the best bestie 🌸"],
+    Beau: ["love u too bro, for real 💛","aw ur the best, love u too"],
   },
   sad: {
     Mom: ["Aw, I'm sorry sweetie. I'm here for you. 💛","That's tough, but I love you and it'll be okay."],
@@ -1260,6 +1264,7 @@ const CHAT_REPLIES = {
     Grandpa: ["Aw, that's no good, kiddo. Hang in there.","Sorry to hear that, champ. I'm here if you need me."],
     Jake: ["aw im sorry dude :( that stinks","thats no good, u ok? here if u need to talk"],
     Ava: ["aww im so sorry :( sending hugs 💕","thats no good, im always here for u"],
+    Beau: ["aw thats rough bro, u ok? im here","sorry to hear that man, lemme know if u wanna talk"],
   },
   excited: {
     Mom: ["I'm so happy for you, sweetie!","Yay! I love your excitement!"],
@@ -1268,6 +1273,7 @@ const CHAT_REPLIES = {
     Grandpa: ["Well how about that, kiddo! Great news.","Ha, that's the spirit, champ!"],
     Jake: ["omgggg yes dude, epic!!","thats so awesome, gg!!"],
     Ava: ["omggg yay!! 🎉","thats amazing!! so happy for u bestie"],
+    Beau: ["yooo thats sick bro!! 🎉","no way thats awesome, lets celebrate man"],
   },
   howareyou: {
     Mom: ["I'm doing great, thanks for asking! How about you?","I'm good, sweetie! Tell me about your day."],
@@ -1276,6 +1282,7 @@ const CHAT_REPLIES = {
     Grandpa: ["Doing just fine, kiddo, just fixed up the shed. You?","Can't complain! What's new, champ?"],
     Jake: ["good good! just playing a game, u?","pretty good!! whatcha doing"],
     Ava: ["im great!! just drawing, u?? 🌸","so good!! whats new with u"],
+    Beau: ["pretty good, just building a lego set, u?","doing good man, bout to game for a bit"],
   },
   food: {
     Mom: ["Ooh yum! Want me to make your favorite snack?","Are you hungry? I can whip something up!","I've got fruit and crackers ready for when you get home."],
@@ -1284,6 +1291,7 @@ const CHAT_REPLIES = {
     Grandpa: ["Sounds good, kiddo! I could go for a snack myself.","Ha, me too, champ! Let's grab something later.","I just caught some fish, we should fry it up!"],
     Jake: ["lol same im starving","ooh can we get ice cream later","bro i could eat, wanna game and snack after?"],
     Ava: ["omg yesss food 🍕","ooh i want some too!! 🌸","lets get snacks and draw together later!!"],
+    Beau: ["lol same, im starving bro","ooh can we get snacks and game later?","bro i could eat, lets build after we eat"],
   },
   school: {
     Mom: ["How did that go? I want to hear all about it!","You're working so hard, I'm proud of you!","Let me know if you need help with homework tonight."],
@@ -1292,6 +1300,7 @@ const CHAT_REPLIES = {
     Grandpa: ["Back in my day school was a whole different story, kiddo!","I'm sure you're doing great, champ!","I used to build things in shop class — what's your favorite subject?"],
     Jake: ["ugh school is so boring lol","did u finish the homework yet","lets play a game after homework, dude"],
     Ava: ["omg same, school is a lot lol","did u finish urs yet?? 🌸","lets draw after homework, itll be fun!!"],
+    Beau: ["ugh school is so long lol","did u finish the homework yet bro","lets game after homework man"],
   },
   play: {
     Mom: ["That sounds like so much fun! Have a blast, sweetie!","Go enjoy yourself! Be safe out there.","Have fun, and text me if you need anything!"],
@@ -1300,6 +1309,7 @@ const CHAT_REPLIES = {
     Grandpa: ["Sounds like a good time, kiddo! Enjoy.","Have fun out there, champ!","Come by the workshop after, I'll show you a new tool."],
     Jake: ["lets play later!! im down","omg yes lets go to the park","wanna play video games instead, dude?"],
     Ava: ["omg yes lets go!! 🌸","sounds so fun, im in!!","can we draw or dance after?? 💃"],
+    Beau: ["lets build something!! im so down 🧱","omg yes lets go play video games","wanna build a lego city or game instead, bro?"],
   },
   animal: {
     Mom: ["Aww, animals are the best! 🐾","That's so sweet, sweetie!"],
@@ -1308,6 +1318,7 @@ const CHAT_REPLIES = {
     Grandpa: ["We had all sorts of critters on the farm, kiddo!","Ha, love a good animal story, champ — I once caught a huge fish too!"],
     Jake: ["omg so cute 🐶","aww i want a pet too, i'd play games with it all day"],
     Ava: ["omg so cute!! 🐾🌸","aww i love animals so much, i'd draw them all day"],
+    Beau: ["aw so cute, i'd build it a lego house lol","haha love that man, animals are cool"],
   },
   weather: {
     Mom: ["Make sure to dress for the weather, sweetie!","That sounds like a nice day for it!"],
@@ -1316,6 +1327,7 @@ const CHAT_REPLIES = {
     Grandpa: ["Ha, I remember weather like that, kiddo — good fishing weather too.","Good day for it, champ, enjoy!"],
     Jake: ["lol its crazy out there","perfect weather for outside stuff, wanna play?"],
     Ava: ["omg its so nice out today!! 🌸","lol weather is wild lately, good day to draw outside"],
+    Beau: ["lol crazy weather, good day to build inside","nice out, perfect day to game or build, bro"],
   },
   joke: {
     Mom: ["Ha! You always make me smile, sweetie. 😄","You're so funny!"],
@@ -1324,6 +1336,7 @@ const CHAT_REPLIES = {
     Grandpa: ["Ha, that's a good one, kiddo! Reminds me of one from the shop.","Ha ha, good one, champ!"],
     Jake: ["lolllll","hahaha thats so funny dude, gg"],
     Ava: ["hahaha omg dying 😂","lolll thats so funny bestie"],
+    Beau: ["hahaha thats hilarious bro","lolll good one man, gg"],
   },
   question: {
     Mom: ["Good question! What do you think, sweetie?","Hmm, let's figure that out together when I see you!"],
@@ -1332,6 +1345,7 @@ const CHAT_REPLIES = {
     Grandpa: ["Good question, kiddo! Let me think on that.","Hmm, we'll puzzle it out together, champ."],
     Jake: ["idk lol good question","hmmm not sure, u?"],
     Ava: ["omg idk!! good question tho","hmmm not sure, what do u think??"],
+    Beau: ["hmm idk, good question bro","not sure man, lets figure it out"],
   },
   yes: {
     Mom: ["Great, sounds like a plan, sweetie!","Awesome, let's make it happen!"],
@@ -1340,6 +1354,7 @@ const CHAT_REPLIES = {
     Grandpa: ["Alright, kiddo, sounds good to me!","Good deal, champ!"],
     Jake: ["yesss lets go","yayyy 🎉"],
     Ava: ["yayyy!! 🎉🌸","eeee yes!!"],
+    Beau: ["yesss lets go bro","heck yeah man, im down"],
   },
   no: {
     Mom: ["No worries at all, maybe next time, sweetie!","That's okay!"],
@@ -1348,6 +1363,7 @@ const CHAT_REPLIES = {
     Grandpa: ["No worries, kiddo, we'll do it another time.","That's alright, champ!"],
     Jake: ["aw ok np","thats fine lol"],
     Ava: ["aw ok no worries!! 🌸","thats okay!!"],
+    Beau: ["aw ok no worries bro","thats fine man, next time"],
   },
   greeting: {
     Mom: ["Hi sweetie! 😊","Hey there, honey!","Hi! I was just thinking of you."],
@@ -1356,6 +1372,7 @@ const CHAT_REPLIES = {
     Grandpa: ["Hiya kiddo!","Well hello there, champ!","Howdy, kiddo! What's happening?"],
     Jake: ["heyyy dude 😎","yooo whats good","sup!!"],
     Ava: ["hii!! 🌸","heyyy whats up","hiii bestie!!"],
+    Beau: ["yo whats up bro","heyyy man, whats good","sup!! whats going on"],
   },
   fallback: {
     Mom: ["That's interesting, tell me more, sweetie!","Oh really? I want to hear more about that!","Aw, tell me everything when you get home!"],
@@ -1364,6 +1381,7 @@ const CHAT_REPLIES = {
     Grandpa: ["Well now, tell me more about that, kiddo.","Is that right, champ? Go on.","Ha, you don't say, kiddo! Tell me more."],
     Jake: ["lol cool, tell me more","oh nice!! whats the story","wait fr? tell me more dude"],
     Ava: ["omg tell me more!!","wait really?? spill the details!!","omg no way, tell me everything bestie!!"],
+    Beau: ["oh nice bro, tell me more","wait really? whats the story man","no way, tell me more about that bro"],
   },
 };
 
@@ -1379,6 +1397,7 @@ const ECHO_TEMPLATES = {
   Grandpa: ['Oh my, "{text}"? Tell me more, kiddo!','Is that so — "{text}"? Go on, champ!','Well now, "{text}"? Tell me more, kiddo!'],
   Jake: ['wait, "{text}"?? tell me more dude','omg "{text}"? no way, more details!!','fr, "{text}"?? tell me more'],
   Ava: ['wait, "{text}"?? tell me more bestie','omg "{text}"? no way, spill the details!!','omggg "{text}"?? tell me everything!!'],
+  Beau: ['wait, "{text}"?? tell me more bro','no way, "{text}"? whats the story man','fr, "{text}"?? tell me everything bro'],
 };
 
 const CATEGORY_PATTERNS = [
